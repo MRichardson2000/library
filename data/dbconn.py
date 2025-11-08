@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from data.dataclasses import DB
-from data.models import book_table
+from data.models import book_table, cart_table, users_table, inventory_table
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine, Result
@@ -66,9 +66,16 @@ def execute_query(
             return []
 
 
-def main() -> None:
-    db_details = load_env()
+def create_schemas() -> None:
+    db_details = load_env(testing=True)
+    create_schema(db_details, users_table)
     create_schema(db_details, book_table)
+    create_schema(db_details, inventory_table)
+    create_schema(db_details, cart_table)
+
+
+def main() -> None:
+    create_schemas()
 
 
 if __name__ == "__main__":
