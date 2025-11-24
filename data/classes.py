@@ -1,15 +1,13 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Union
 
 
 class Library:
     def __init__(self) -> None:
         self.books: list[Book] = []
-        self.book_status: list[BookStatus] = []
         self.users: list[User] = []
         self.inventory: list[Inventory] = []
-        self.cart: list[Cart] = []
 
 
 class Book:
@@ -19,129 +17,95 @@ class Book:
         title: str,
         author: str,
         genre: str,
-        rating: int | float,
+        rating: Union[int, float],
     ) -> None:
         self.book_id = book_id
         self.title = title
         self.author = author
         self.genre = genre
         self.rating = rating
-        self.status = BookStatus()
 
     def __repr__(self) -> str:
-        return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}\n Book Status{self.status}"
+        return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."
 
-    def update_rating(self, new_rating: int | float) -> str:
+    def update_rating(self, new_rating: Union[int, float]) -> None:
         if not isinstance(new_rating, (int, float)):  # type: ignore
             raise TypeError(
-                f"Rating must be int or float - strings are not allowed, You entered: {type(new_rating)}"
+                f"Rating must be int or float, not {type(new_rating).__name__}"
             )
-        if new_rating > 0 and new_rating <= 5:
-            old_rating = self.rating
+        if 1 <= new_rating <= 5:
             self.rating = new_rating
-            return f"The rating of {self.title} has been updated from {old_rating} to {new_rating}"
         else:
-            return f"The rating of {self.title} can't be less than 0 or greater than 5"
+            raise ValueError("The rating needs to be between 1 and 5.")
 
 
-class BookStatus:
+class Loan:
     def __init__(
         self,
-        checked_in: bool = True,
-        checked_out: bool = False,
-        stolen: bool = False,
-        damaged: bool = False,
-        sold: bool = False,
-        refurbished: bool = False,
-        new: bool = True,
-        responsible_party: User | None = None,
+        book: Book,
+        user: User,
+        expected_return: datetime,
+        loaned: bool = False,
+        loan_time: datetime | None = None,
+        late_fee: bool = False,
     ) -> None:
-        self.checked_in = checked_in
-        self.checked_out = checked_out
-        self.stolen = stolen
-        self.damaged = damaged
-        self.sold = sold
-        self.refurbished = refurbished
-        self.new = new
-        self.responsible_party = responsible_party
-        self.book_loan_timings = BookLoanTimings()
+        self.book = book
+        self.user = user
+        self.expected_return = expected_return
+        self.loaned = loaned
+        self.loan_time = loan_time
+        self.late_fee = late_fee
 
-    def __repr__(self) -> str:
-        flags: list[str] = []
-        if self.stolen:
-            flags.append("stolen")
-        if self.damaged:
-            flags.append("damaged")
-        if self.sold:
-            flags.append("sold")
-        if self.refurbished:
-            flags.append("refurbished")
-        if self.new:
-            flags.append("new")
-        if self.checked_out and self.responsible_party:
-            flags.append(f"On loan by: {self.responsible_party}")
-        return f"BookStatus: {', '.join(flags) or 'none'}"
+    def borrow_book(self) -> None:
+        if self.book.title and not self.loaned:
+            self.borrow_time()
+            self.loaned = True
 
-    def damaged_book(self, book: "Book") -> str:
-        self.damaged = True
-        return f"{book.title} has been damaged. {self.responsible_party}: to pay a replacement fee of £5. Please make this payment within the next 7 days at the reception desk."
+    def return_book(self) -> float:
+        if self.book.title and self.loaned:
+            self.loaned = False
+            late_fee = self.calculate_late_fee()
+            if late_fee:
+                return late_fee
+            else:
+                return 0.0
+        return 0.0
 
-    def sold_book(self, book: "Book") -> str:
-        self.sold = True
-        return f"{book.title} has been sold to {self.responsible_party}. Thank you!"
+    def borrow_time(self, now: Optional[datetime] = None) -> None:
+        if now is None:
+            now = datetime.now()
+        self.loan_time = now
 
-    def stolen_book(self, book: "Book", timing: BookLoanTimings) -> str:
-        """TODO - Finish this off"""
-        self.stolen = True
-        if self.checked_out:
-            return "ignore for now coming back to it"
-        else:
-            return "ignore for now coming back to it"
-
-    def checkout_book(self, book: Book, user: "User") -> str:
-        if not self.checked_out:
-            self.checked_out = True
-            self.responsible_party = user
-            time_borrowed = self.book_loan_timings.borrow_time()
-            return f"{book.title} has been checked out to {user.first_name} {user.last_name} \n {time_borrowed}"
-        else:
-            return f"{book.title} is already checked out."
-
-    def checkin_book(self, book: "Book") -> str:
-        if self.checked_out:
-            self.checked_out = False
-            self.checked_in = True
-            return f"{book.title} has been checked in by {self.responsible_party}. The Library hopes you enjoyed this book!"
-        else:
-            return f"{book.title} is already checked in."
-
-
-class BookLoanTimings:
-    def __init__(self) -> None:
-        self.borrowed_datetime = datetime.now()
-
-    def borrow_time(self) -> str:
-        self.borrowed_datetime = datetime.now()
-        cleaned_borrowed_datetime = self.borrowed_datetime.strftime("%Y-%m-%d %H:%M")
-        return_datetime = self.borrowed_datetime + timedelta(days=30)
-        cleaned_return_datetime = return_datetime.strftime("%Y-%m-%d %H:%M")
-        return f"Book borrowed on: {cleaned_borrowed_datetime}. \n Please return on: {cleaned_return_datetime} to avoid a late fee charge."
-
-    def late_return(self, book: Book) -> str:
-        now = datetime.now()
-        late_threshold = self.borrowed_datetime + timedelta(days=30)
+    def calculate_late_fee(self, now: Optional[datetime] = None) -> float:
+        if now is None:
+            now = datetime.now()
+        if not self.loan_time:
+            return 0.0
+        late_threshold = self.loan_time + timedelta(days=30)
         if now > late_threshold:
-            return (
-                f"{book.title}: has been returned late. There is a late fee of £2.50."
-            )
+            self.late_fee = True
+            return 2.50
         else:
-            return f"{book.title}: has been returned on time. There is no late fee."
+            return 0.0
 
-    def extend_borrow_time(self, book: Book) -> str:
-        self.borrowed_datetime = datetime.now()
-        new_return_date = self.borrowed_datetime + timedelta(days=30)
-        cleaned_datetime = new_return_date.strftime("%Y-%m-%d %H:%M")
-        return f"{book.title} has been extended for another 30 days. Please return on {cleaned_datetime}"
+    def extend_borrow_time(self) -> None:
+        self.borrow_time()
+
+    def get_due_date(self) -> datetime:
+        if not self.loan_time:
+            raise ValueError("No borrow record found.")
+        return self.loan_time + timedelta(days=30)
+
+    def pay_late_fee(self) -> None:
+        fee = self.calculate_late_fee()
+        if fee > 0:
+            self.late_fee = False
+
+    def get_user(self) -> tuple[str, str]:
+        if self.loaned:
+            return self.user.first_name, self.user.last_name
+        else:
+            return ("no", "user")
 
 
 class User:
@@ -164,62 +128,52 @@ class User:
     def __repr__(self) -> str:
         return f"User: {self.first_name} {self.last_name}, {len(self.books_loaned)} books loaned."
 
-    def surname_change(self, new_last_name: str) -> str:
+    def surname_change(self, new_last_name: str) -> None:
         self.last_name = new_last_name
-        return f"Surname has been updated to {new_last_name} as requested."
 
-    def new_email(self, new_email: str) -> str:
+    def new_email(self, new_email: str) -> None:
         self.email_address = new_email
-        return f"Email address has been updated to {new_email} as requested."
 
-    def new_phone_number(self, new_phone_num: int) -> str:
+    def new_phone_number(self, new_phone_num: int) -> None:
         self.phone_number = new_phone_num
-        return f"Phone number has been updated to {new_phone_num} as requested."
 
-    def books_on_loan(self) -> str:
-        book_length = len(self.books_loaned)
-        return f"{self.first_name} has: {book_length} books loaned."
+    def get_books_on_loan(self) -> int:
+        return len(self.books_loaned)
 
 
 class Inventory:
     def __init__(
         self,
         book_id: int,
-        quantity_available: int,
+        book_quantity: int,
         shelf_location: str,
-        is_available: bool,
+        availability: bool,
     ) -> None:
         self.book_id = book_id
-        self.quantity_available = quantity_available
+        self.book_quantity = book_quantity
         self.shelf_location = shelf_location
-        self.is_available = is_available
+        self.availability = availability
 
-    def update_quantity(self, available_items: int) -> None:
-        self.quantity_available = available_items
+    def add_stock(self, quantity: int) -> None:
+        self.book_quantity += quantity
+
+    def remove_stock(self, quantity: int) -> None:
+        if not quantity <= self.book_quantity:
+            self.book_quantity -= quantity
+
+    def get_quantity(self) -> int:
+        return self.book_quantity
+
+    def get_availability(self) -> bool:
+        return self.book_quantity > 0
 
     def update_availability(self) -> None:
-        self.is_available = True
+        self.availability = self.book_quantity > 0
 
-
-class Cart:
-    def __init__(
-        self,
-        user: User,
-        book_list: list[Book],
-        borrow_date: datetime,
-        return_date: datetime,
-        late_return: bool,
-        late_fee: int,
-    ) -> None:
-        self.user = user
-        self.book_list = book_list
-        self.borrow_date = borrow_date
-        self.return_date = return_date
-        self.late_return = late_return
-        self.late_fee = late_fee
+    def needs_restock(self) -> bool:
+        return self.book_quantity < 2
 
 
 if __name__ == "__main__":
     book = Book(1, "test", "test", "test", 4)
-    print(book.update_rating(3))
-    print(book)
+    book.update_rating(3)
