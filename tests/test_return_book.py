@@ -3,11 +3,11 @@ from tests.test_add_book import test_add_book
 from datetime import datetime
 
 
-def test_borrow_book() -> None:
+def test_return_book() -> None:
     book = test_add_book()
     user = User(1, "user", "user", "user@user.user.user", 73849043912)
     loan = Loan(book, user, expected_return=datetime.now())
     loan.borrow_book()
-    assert loan.loaned == True
-    assert user.first_name == "user"
-    assert loan.expected_return == datetime.now()
+    loaned = loan.return_book()
+    assert loan.loaned == False
+    assert isinstance(loaned, float)
