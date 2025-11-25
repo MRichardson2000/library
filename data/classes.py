@@ -44,52 +44,41 @@ class Loan:
         self,
         book: Book,
         user: User,
-        expected_return: datetime,
         loaned: bool = False,
         loan_time: datetime | None = None,
         late_fee: bool = False,
     ) -> None:
         self.book = book
         self.user = user
-        self.expected_return = expected_return
         self.loaned = loaned
         self.loan_time = loan_time
         self.late_fee = late_fee
 
-    def borrow_book(self) -> None:
+    def borrow_book(self, now: Optional[datetime] = None) -> None:
         if self.book.title and not self.loaned:
-            self.borrow_time()
+            self.borrow_time(now)
             self.loaned = True
 
-    def return_book(self) -> float:
+    def return_book(self, now: Optional[datetime] = None) -> float:
         if self.book.title and self.loaned:
             self.loaned = False
-            late_fee = self.calculate_late_fee()
-            if late_fee:
-                return late_fee
-            else:
-                return 0.0
+            return self.calculate_late_fee(now)
         return 0.0
 
     def borrow_time(self, now: Optional[datetime] = None) -> None:
-        if now is None:
-            now = datetime.now()
-        self.loan_time = now
+        self.loan_time = now or datetime.now()
 
     def calculate_late_fee(self, now: Optional[datetime] = None) -> float:
-        if now is None:
-            now = datetime.now()
         if not self.loan_time:
             return 0.0
-        late_threshold = self.loan_time + timedelta(days=30)
-        if now > late_threshold:
+        now = now or datetime.now()
+        if now > self.get_due_date():
             self.late_fee = True
             return 2.50
-        else:
-            return 0.0
+        return 0.0
 
-    def extend_borrow_time(self) -> None:
-        self.borrow_time()
+    def extend_borrow_time(self, now: Optional[datetime] = None) -> None:
+        self.borrow_time(now)
 
     def get_due_date(self) -> datetime:
         if not self.loan_time:
@@ -97,8 +86,7 @@ class Loan:
         return self.loan_time + timedelta(days=30)
 
     def pay_late_fee(self) -> None:
-        fee = self.calculate_late_fee()
-        if fee > 0:
+        if self.late_fee:
             self.late_fee = False
 
     def get_user(self) -> tuple[str, str]:

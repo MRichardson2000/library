@@ -6,8 +6,7 @@ from datetime import datetime
 def test_borrow_book() -> None:
     book = test_add_book()
     user = User(1, "user", "user", "user@user.user.user", 73849043912)
-    loan = Loan(book, user, expected_return=datetime.now())
-    loan.borrow_book()
+    loan = Loan(book, user)
+    loan.borrow_book(now=datetime.now())
     assert loan.loaned == True
     assert user.first_name == "user"
-    assert loan.expected_return == datetime.now()
