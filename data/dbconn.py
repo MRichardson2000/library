@@ -3,8 +3,8 @@ from data.dataclasses import DB
 from data.models import book_table, cart_table, users_table, inventory_table
 import os
 import sqlalchemy as sa
-from sqlalchemy.engine import Engine, Result
-from typing import Optional, Any, List
+from sqlalchemy.engine import Engine
+from typing import Optional, Any, List, Union, Sequence
 
 
 def load_env(testing: bool = False) -> DB:
@@ -48,13 +48,17 @@ def create_schema(
 
 
 def execute_query(
-    db_details: DB, query: str, params: tuple[Any, ...] = ()
+    query: str,
+    params: Optional[Union[Sequence[Any], dict[str, Any]]] = None,
+    db_details: Optional[DB] = None,
 ) -> Optional[list[dict[str, Any]]]:
+    if db_details is None:
+        db_details = load_env()
     engine: Engine = get_engine(db_details)
     with engine.connect() as conn:
         trans = conn.begin()
         try:
-            result: Result[Any] = conn.execute(sa.text(query), params)
+            result = conn.execute(sa.text(query), params or {})
             if query.strip().lower().startswith("select"):
                 rows: List[dict[str, Any]] = [dict(row) for row in result.fetchall()]
                 return rows
@@ -62,8 +66,7 @@ def execute_query(
             return []
         except Exception as e:
             trans.rollback()
-            print(f"Execute Query failed due to: {e}")
-            return []
+            raise e
 
 
 def create_schemas() -> None:
