@@ -78,33 +78,3 @@ inventory_insert = """
         :is_available
     );
 """
-
-cart_table = """
-    create table if not exists cart (
-        unique_id bigserial primary key,
-        user_id int not null references users(user_id),
-        book_list text not null,
-        borrow_date timestamp not null,
-        return_date timestamp not null,
-        late_return boolean not null default false,
-        late_fee money
-    );
-"""
-
-cart_insert = """
-    insert into cart (
-        user_id,
-        book_list,
-        borrow_date,
-        return_date,
-        late_return,
-        late_fee
-    ) values (
-        :user_id,
-        :book_list,
-        :borrow_date,
-        :return_date,
-        :late_return,
-        :late_fee
-    );
-"""
