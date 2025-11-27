@@ -86,8 +86,8 @@ class UserServices:
             }
             if not filters:
                 raise ValueError("At least one filter must be provided")
-            values = list(filters.values())
-            get_books = execute_query(f"select * from users where {values}")
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+            get_books = execute_query(f"select * from users where {conditions}")
             if get_books:
                 for row in get_books:
                     if len(row) > 5:
