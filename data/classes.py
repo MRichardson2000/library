@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 
 class Library:
@@ -115,6 +115,13 @@ class User:
 
     def __repr__(self) -> str:
         return f"User: {self.first_name} {self.last_name}, {len(self.books_loaned)} books loaned."
+
+    def filters(self) -> dict[str, Any]:
+        return {
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email_address": self.email_address,
+        }
 
     def surname_change(self, new_last_name: str) -> None:
         self.last_name = new_last_name

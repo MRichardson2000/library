@@ -42,14 +42,9 @@ class UserServices:
 
     def get_user(self, user: User) -> list[dict[str, Any]] | None:
         try:
-            params: dict[str, Any] = {
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "email_address": user.email_address,
-                "phone_number": user.phone_number,
-            }
+            filters: dict[str, Any] = user.filters()
             filters: dict[str, Any] = {
-                **{k: v for k, v in params.items() if v is not None},
+                **{k: v for k, v in filters.items() if v is not None},
                 "books_loaned": user.books_loaned,
             }
             conditions = " and ".join([f"{k} = :{k}" for k in filters.keys()])
@@ -62,11 +57,7 @@ class UserServices:
 
     def delete_user(self, user: User) -> bool:
         try:
-            filters: dict[str, Any] = {
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "email_address": user.email_address,
-            }
+            filters: dict[str, Any] = user.filters()
             filters: dict[str, Any] = {
                 k: v for k, v in filters.items() if v is not None
             }
@@ -87,12 +78,23 @@ class UserServices:
         except Exception:
             raise
 
-    def check_borrow_eligibility(self, user: User) -> None:
-        # try:
-        #     filters: dict[str, Any] = {
-        #         "first_name"
-        #     }
-        pass
+    def check_borrow_eligibility(self, user: User) -> bool:
+        try:
+            filters: dict[str, Any] = user.filters()
+            filters: dict[str, Any] = {
+                k: v for k, v in filters.items() if v is not None
+            }
+            if not filters:
+                raise ValueError("At least one filter must be provided")
+            values = list(filters.values())
+            get_books = execute_query(f"select * from users where {values}")
+            if get_books:
+                for row in get_books:
+                    if len(row) > 5:
+                        return False
+            return True
+        except Exception:
+            raise
 
     def calculate_outstanding_late_fees(self) -> None:
         pass
