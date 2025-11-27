@@ -1,7 +1,6 @@
 from __future__ import annotations
 from data.classes.user import User
-
-# from data.classes.loan import Loan
+from data.classes.loan import Loan
 from data.database.dbconn import execute_query
 from data.database.models import users_insert
 from typing import Any
@@ -12,40 +11,56 @@ class UserServices:
         pass
 
     def create_user(self, user: User) -> bool:
+        """
+        Create a new user record in the database if one does not exist already.
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+            bool: True if the user was created and registered in the database successfully. Otherwise false
+
+        Raises:
+            Exception: handles any errors outside of our control - Database errors for example.
+
+        Notes:
+            This function will check if a user with the details passed in already exists, if a match isn't
+            found it's added into the database. Otherwise it returns false and does nothing.
+        """
         try:
-            check_user = execute_query(
-                """
-                select * from users
-                where first_name = :first_name,
-                    and last_name = :last_name,
-                    and email_address = :email_address,
-                    and phone_number = :phone_number
-                """,
-                {
-                    "first_name": user.first_name,
-                    "last_name": user.last_name,
-                    "email_addres": user.email_address,
-                    "phone_number": user.phone_number,
-                },
-            )
-            user_insert_tuple = (
-                user.first_name,
-                user.last_name,
-                user.email_address,
-                user.phone_number,
-                user.books_loaned,
-            )
-            if not check_user:
-                execute_query(users_insert, user_insert_tuple)
+            filters: dict[str, Any] = user.filters()
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError("All filters are required for creating a user")
+            user_check = execute_query(f"select * from users where {filters}")
+            if not user_check:
+                execute_query(users_insert, filters)
                 return True
         except Exception as e:
             raise e
         return False
 
     def get_user(self, user: User) -> list[dict[str, Any]] | None:
+        """
+        Searches the database to get the details of the user passed in
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+            list of dictionarys containing a string and then Any.
+
+        Raises:
+            Exception: handles any errors outside of our control - Database errors for example.
+
+        Notes:
+            This function uses a dictionary comprehension to create a new dictionary which removes
+            None values. We then pull from the database using the details passed in. It will return
+            a user and their assosciated information.
+        """
         try:
             filters: dict[str, Any] = user.filters()
-            filters: dict[str, Any] = {
+            filters = {
                 **{k: v for k, v in filters.items() if v is not None},
                 "books_loaned": user.books_loaned,
             }
@@ -58,11 +73,28 @@ class UserServices:
             raise e
 
     def delete_user(self, user: User) -> bool:
+        """
+        Attempts to delete a user from the database
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+            bool: True if the user was successfully deleted otherwise false. Raises
+            an error if no matching user is found or if multiple matches exist.
+
+        Raises:
+            ValueError: If no filters are provided, if the query returns no results, or if multiple rows are found.
+            Exception: For unexpected errors outside of our control such as database related issues
+
+        Notes:
+        A dictionary comprehension is used to remove None values from the filters before building the query.
+        The function first verifies the existence of the user before attempting deletion.
+        Deletion only proceeds if exactly one matching user is found.
+        """
         try:
             filters: dict[str, Any] = user.filters()
-            filters: dict[str, Any] = {
-                k: v for k, v in filters.items() if v is not None
-            }
+            filters = {k: v for k, v in filters.items() if v is not None}
             if not filters:
                 raise ValueError("At least one filter must be provided")
             conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
@@ -81,11 +113,24 @@ class UserServices:
             raise
 
     def check_borrow_eligibility(self, user: User) -> bool:
+        """
+        .
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
         try:
             filters: dict[str, Any] = user.filters()
-            filters: dict[str, Any] = {
-                k: v for k, v in filters.items() if v is not None
-            }
+            filters = {k: v for k, v in filters.items() if v is not None}
             if not filters:
                 raise ValueError("At least one filter must be provided")
             conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
@@ -98,27 +143,100 @@ class UserServices:
         except Exception:
             raise
 
-    # def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
-    #     try:
-    #         filters: dict[str, Any] = user.filters()
-    #         filters: dict[str, Any] = {
-    #             k: v for k, v in filters.items() if v is not None
-    #         }
-    #         if not filters:
-    #             raise ValueError("At least one filter must be provided")
-    #         conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+    def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
+        """
+        .
 
-    #     except Exception:
-    #         raise
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
+        try:
+            filters: dict[str, Any] = user.filters()
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError("At least one filter must be provided")
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+
+        except Exception:
+            raise
 
     def list_overdue_users(self) -> None:
+        """
+        .
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
         pass
 
     def audit_log(self) -> None:
+        """
+        .
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
         pass
 
     def find_top_borrowers(self) -> None:
+        """
+        .
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
         pass
 
     def longstanding_borrowers(self) -> None:
+        """
+        .
+
+        Args:
+            user (User): a User object - the class object is in data - classes - user.py
+
+        Returns:
+
+
+        Raises:
+
+
+        Notes:
+
+        """
         pass
