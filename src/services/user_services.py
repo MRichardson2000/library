@@ -1,7 +1,9 @@
 from __future__ import annotations
-from data.classes import User, Loan
-from data.dbconn import execute_query
-from data.models import users_insert
+from data.classes.user import User
+
+# from data.classes.loan import Loan
+from data.database.dbconn import execute_query
+from data.database.models import users_insert
 from typing import Any
 
 
@@ -96,8 +98,18 @@ class UserServices:
         except Exception:
             raise
 
-    def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
-        
+    # def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
+    #     try:
+    #         filters: dict[str, Any] = user.filters()
+    #         filters: dict[str, Any] = {
+    #             k: v for k, v in filters.items() if v is not None
+    #         }
+    #         if not filters:
+    #             raise ValueError("At least one filter must be provided")
+    #         conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+
+    #     except Exception:
+    #         raise
 
     def list_overdue_users(self) -> None:
         pass

@@ -1,4 +1,4 @@
-from data.classes import Book
+from data.classes.book import Book
 
 
 def testing_repr() -> Book:

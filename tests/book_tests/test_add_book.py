@@ -1,8 +1,8 @@
 from __future__ import annotations
-from data.dbconn import execute_query, load_env
-from data.dataclasses import DB
-from data.classes import Book
-from data.models import book_insert
+from data.database.dbconn import execute_query, load_env
+from data.dataclasses.db_dataclass import DB
+from data.classes.book import Book
+from data.database.models import book_insert
 
 
 def test_add_book(db: DB = load_env(testing=True)) -> Book:

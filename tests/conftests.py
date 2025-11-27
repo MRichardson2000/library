@@ -1,6 +1,6 @@
 import pytest
 from data.dbconn import load_env
-from data.dataclasses import DB
+from data.dataclasses.db_dataclass import DB
 
 
 @pytest.fixture

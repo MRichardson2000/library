@@ -1,4 +1,4 @@
-from data.classes import User
+from data.classes.user import User
 
 
 def test_new_email() -> None:

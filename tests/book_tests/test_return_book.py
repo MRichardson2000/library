@@ -1,5 +1,6 @@
-from data.classes import Loan, User
-from tests.test_add_book import test_add_book
+from data.classes.loan import Loan
+from data.classes.user import User
+from tests.book_tests.test_add_book import test_add_book
 
 
 def test_return_book() -> None:

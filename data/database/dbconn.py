@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
-from data.dataclasses import DB
-from data.models import book_table, users_table, inventory_table
+from data.dataclasses.db_dataclass import DB
+from data.database.models import book_table, users_table, inventory_table
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine

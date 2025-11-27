@@ -1,5 +1,5 @@
-from tests.test_add_book import test_add_book
-from data.classes import Book
+from tests.book_tests.test_add_book import test_add_book
+from data.classes.book import Book
 
 
 def test_update_rating() -> None:
