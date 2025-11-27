@@ -71,6 +71,7 @@ loan_insert = """
     insert into loan (
         book_id,
         user_id,
+        accumulated_late_fee,
         loaned,
         loan_time,
         due_date,
@@ -78,6 +79,7 @@ loan_insert = """
     ) values (
         :book_id,
         :user_id,
+        :accumulated_late_fee,
         :loaned,
         :loan_time,
         :due_date,

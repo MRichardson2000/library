@@ -30,11 +30,14 @@ class UserServices:
         try:
             filters: dict[str, Any] = user.filters()
             filters = {k: v for k, v in filters.items() if v is not None}
+            conditions = " and ".join(
+                [f"{k} = :{k}, {v} = %s" for k, v in filters.items()]
+            )
             if not filters:
                 raise ValueError("All filters are required for creating a user")
             user_check = execute_query(f"select * from users where {filters}")
             if not user_check:
-                execute_query(users_insert, filters)
+                execute_query(users_insert, conditions)
                 return True
         except Exception as e:
             raise e
@@ -60,15 +63,15 @@ class UserServices:
         """
         try:
             filters: dict[str, Any] = user.filters()
-            filters = {
-                **{k: v for k, v in filters.items() if v is not None},
-                "books_loaned": user.books_loaned,
-            }
-            conditions = " and ".join([f"{k} = :{k}" for k in filters.keys()])
-            user_details = f"""
-                select * from users where {conditions}
-                """
-            return execute_query(user_details, filters)
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError(
+                    "You need to pass in at least one value to find a user"
+                )
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+            user_details = f"select * from users where {conditions}"
+            values = tuple(filters.values())
+            return execute_query(user_details, values)
         except Exception as e:
             raise e
 
@@ -114,18 +117,22 @@ class UserServices:
 
     def check_borrow_eligibility(self, user: User) -> bool:
         """
-        .
+        Checks if someone is eligible to borrow a book. The current loan limit is 5 books
 
         Args:
             user (User): a User object - the class object is in data - classes - user.py
 
         Returns:
-
+            bool: Either true or false if they already have 5 loaned books
 
         Raises:
-
+            ValueError: if no filters are provided
+            Exception: if an error outside of our control happens
 
         Notes:
+            We find the users and then look for the books loaned column. If the value is
+            greater than 5 then they're at max capacity and need to return a book before
+            they can loan another. The max is 5.
 
         """
         try:
@@ -134,40 +141,69 @@ class UserServices:
             if not filters:
                 raise ValueError("At least one filter must be provided")
             conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            get_books = execute_query(f"select * from users where {conditions}")
-            if get_books:
-                for row in get_books:
-                    if len(row) > 5:
-                        return False
+            values = list(filters.values())
+            get_user = execute_query(f"select * from users where {conditions}", values)
+            if get_user and get_user[0].get("books_loaned", 0) > 5:
+                return False
             return True
         except Exception:
             raise
 
-    def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
+    def calculate_outstanding_late_fees(self, user: User) -> float:
         """
-        .
+        Calculate the total outstanding late fees for a given user.
+
+        This method builds a SQL query based on the filters provided by the
+        `User` object, retrieves the accumulated late fees from the `loan`
+        table, and returns the total amount owed. If no filters are provided,
+        a ValueError is raised. If no matching records are found, the method
+        returns 0.0.
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            user (User): A User object (defined in `data/classes/user.py`)
+                that provides filter criteria through its `filters()` method.
 
         Returns:
-
+            float: The total outstanding late fee for the user. Returns 0.0
+            if no records are found.
 
         Raises:
-
+            ValueError: If no filters are provided by the User object.
+            Exception: Propagates any exceptions raised during query execution.
 
         Notes:
-
+            - The query joins the `users` table with the `loan` table on
+            `user_id`.
+            - Filters are dynamically applied to the WHERE clause based on
+            non-null values returned by `user.filters()`.
+            - The query groups results by user details to ensure unique
+            aggregation.
         """
+
         try:
             filters: dict[str, Any] = user.filters()
             filters = {k: v for k, v in filters.items() if v is not None}
             if not filters:
                 raise ValueError("At least one filter must be provided")
             conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-
+            values = list(filters.values())
+            query = f"""
+                select u.user_id, 
+                u.first_name, 
+                u.last_name,
+                l.accumulated_late_fee 
+                from users u
+                left join loan l on u.user_id = l.user_id
+                where {conditions}
+                group by u.user_id, u.first_name, u.last_name
+                """
+            result = execute_query(query, values)
+            if result:
+                total_fee = result[0].get("l.accumulated_late_fee", 0)
+                return total_fee
         except Exception:
             raise
+        return 0.0
 
     def list_overdue_users(self) -> None:
         """

@@ -9,12 +9,14 @@ class Loan:
         self,
         book: Book,
         user: User,
+        accumulated_late_fee: float = 0.0,
         loaned: bool = False,
         loan_time: datetime | None = None,
         late_fee: bool = False,
     ) -> None:
         self.book = book
         self.user = user
+        self.accumulated_late_fee = accumulated_late_fee
         self.loaned = loaned
         self.loan_time = loan_time
         self.late_fee = late_fee
@@ -39,6 +41,7 @@ class Loan:
         now = now or datetime.now()
         if now > self.get_due_date():
             self.late_fee = True
+            self.accumulated_late_fee += 2.50
             return 2.50
         return 0.0
 
@@ -53,6 +56,7 @@ class Loan:
     def pay_late_fee(self) -> None:
         if self.late_fee:
             self.late_fee = False
+            self.accumulated_late_fee -= 2.50
 
     def get_user(self) -> tuple[str, str]:
         if self.loaned:
