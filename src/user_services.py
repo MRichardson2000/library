@@ -1,5 +1,5 @@
 from __future__ import annotations
-from data.classes import User
+from data.classes import User, Loan
 from data.dbconn import execute_query
 from data.models import users_insert
 from typing import Any
@@ -96,8 +96,8 @@ class UserServices:
         except Exception:
             raise
 
-    def calculate_outstanding_late_fees(self) -> None:
-        pass
+    def calculate_outstanding_late_fees(self, user: User, loan: Loan) -> float:
+        
 
     def list_overdue_users(self) -> None:
         pass

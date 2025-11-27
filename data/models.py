@@ -55,6 +55,36 @@ book_insert = """
     );
 """
 
+loan_table = """
+    create table if not exists loan (
+        loan_id bigserial primary key,
+        book_id int not null references book(book_id) on delete cascade,
+        user_id int not null references users(user_id) on delete cascade,
+        loaned boolean not null default false,
+        loan_time timestamp,
+        due_date timestamp,
+        late_fee boolean not null default false
+    );
+"""
+
+loan_insert = """
+    insert into loan (
+        book_id,
+        user_id,
+        loaned,
+        loan_time,
+        due_date,
+        late_fee
+    ) values (
+        :book_id,
+        :user_id,
+        :loaned,
+        :loan_time,
+        :due_date,
+        :late_fee
+    );
+"""
+
 inventory_table = """
     create table if not exists inventory (
         unique_id bigserial primary key,
