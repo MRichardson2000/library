@@ -64,4 +64,4 @@ class Loan:
         if self.loaned:
             return self.user.first_name, self.user.last_name
         else:
-            return ("no", "user")
+            return ("nouser", "found")
