@@ -15,7 +15,7 @@ class BookServices(BaseService):
     def __init__(self) -> None:
         pass
 
-    def create_book(self, book: Book) -> bool:
+    def create_book(self, book: Book) -> None:
         """
         Creates a book object in the database using the book class if the book
         doesn't already exist.
@@ -24,7 +24,7 @@ class BookServices(BaseService):
             book (Book): a book object. The class object is in data/classes/book.py
 
         Returns:
-            bool: True if the book is created successfully or false
+            None: it just creates the object
 
         Raises:
             BookAlreadyExistsError: if the book already exists
@@ -34,7 +34,7 @@ class BookServices(BaseService):
         Notes:
             This function will check if a book with the details passed in already
             exists. If it's found it returns BookAlreadyExistsError otherwise it creates the book
-            object and adds it to the database and then returns True
+            object and adds it to the database
         """
         conditions, values = self.build_conditions(book.filters())
         verification = f"select * from book where {conditions}"
@@ -43,7 +43,6 @@ class BookServices(BaseService):
             raise BookAlreadyExistsError(f"Book already exists")
         try:
             execute_query(book_insert, values)
-            return True
         except Exception as e:
             raise DatabaseServiceError("Failed to create book") from e
 
@@ -55,10 +54,10 @@ class BookServices(BaseService):
             book (Book): a Book object - the class object is in data/classes/book.py
 
         Returns:
-            list of dictionary's containing a string and then Any
+            list[dict[str, Any]]: the details of the selected book
 
         Raises:
-            BookAlreadyExistsError: if the book already exists
+            BookNotFoundError: if the book is not found in the database
             DatabaseServiceError: For any database errors
             Exception: Anything else
 
@@ -87,12 +86,11 @@ class BookServices(BaseService):
             book (Book): a Book object - the class object is in data - classes - book.py
 
         Returns:
-            bool: True if the book was successfully deleted otherwise false. Raises
-            an error if no matching book is found or if multiple matches exist.
+            None: It marks the book as deleted and returns nothing.
 
         Raises:
             ValueError: If no filters are provided, if the query returns no results, or if multiple rows are found.
-            BookAlreadyExistsError: if the book already exists
+            BookNotFoundError: if the book isn't found in the database
             DatabaseServiceError: For any database errors
             Exception: Anything else
         Notes:
@@ -125,7 +123,7 @@ class BookServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to delete book") from e
 
-    def update_book_rating(self, new_rating: int, book: Book) -> bool:
+    def update_book_rating(self, new_rating: int, book: Book) -> None:
         """
         Searches the database for the book passed in and attempts to update the rating.
 
@@ -134,40 +132,33 @@ class BookServices(BaseService):
             book (Book): a book object - the class object is in data/classes/book.py
 
         Returns:
-            bool: True if the rating is updated, False if multiple rows are found
+            None: it updates the rating and returns None
 
         Raises:
             ValueError: if the query returns no results or if multiple rows are found
-            Exception: For unexpected errors outside of our control such as database
-            issues.
+            DatabaseServiceError: For any database related errors outside of our control
+            Exception: Any other errors found
 
         Notes:
             A book is pulled from the database and then we change the rating to
-            whatever is entered in. Then we return True if successful.
+            whatever is entered in.
 
         """
+        conditions, values = self.build_conditions(book.filters())
+        find_book = f"select * from book where {conditions}"
         try:
-            conditions, values = self.build_conditions(book.filters())
-            find_book = f"select * from book where {conditions}"
             if find_book:
                 rows = execute_query(find_book, values)
                 if not rows:
-                    raise ValueError("Query returned no results, book not found")
-                if len(rows) == 1:
-                    rating = book.update_rating(new_rating)
-                    update_query = f"""
-                                    update book
-                                    set rating = {rating}
-                                    where (
-                                        select * from book where {conditions}
-                                    )
-                                    """
-                    execute_query(update_query, values)
-                    return True
-                else:
-                    raise ValueError(
-                        "Modification of rating aborted due to multiple rows being found"
-                    )
+                    raise BookNotFoundError("Query returned no results, book not found")
+                if len(rows) > 1:
+                    raise ValueError("Update aborted due to multiple rows being found")
+                rating = book.update_rating(new_rating)
+                update_query = f"""
+                                update book
+                                set rating = {rating}
+                                where {conditions}
+                                """
+                execute_query(update_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to update book rating") from e
-        return False
