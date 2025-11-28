@@ -82,7 +82,8 @@ class BookServices:
     def delete_book(self, book: Book) -> bool:
         """
         Attempts to delete a book from the database. It doesn't delete it, it just
-        marks it as deleted in the database
+        marks it as deleted in the database. It then updates the inventory table
+        to show the book is no longer available by setting it to false.
 
         Args:
             book (Book): a Book object - the class object is in data - classes - book.py
@@ -120,6 +121,18 @@ class BookServices:
                                 )
                                 """
                 execute_query(delete_query, values)
+                availability = f"""
+                    update inventory
+                    set is_available = False
+                    where (
+                    select *
+                    from book b
+                    where {conditions}
+                    left join inventory i
+                    on i.book_id - b.book_id
+                    )
+                    """
+                execute_query(availability, values)
                 return True
             else:
                 raise ValueError("Deletion aborted due to multiple rows being found")
