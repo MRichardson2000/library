@@ -2,10 +2,16 @@ from __future__ import annotations
 from data.classes.book import Book
 from data.database.dbconn import execute_query
 from data.database.models import book_insert
+from src.services.base_services import BaseService
+from src.services.exceptions import (
+    BookAlreadyExistsError,
+    DatabaseServiceError,
+    BookNotFoundError,
+)
 from typing import Any
 
 
-class BookServices:
+class BookServices(BaseService):
     def __init__(self) -> None:
         pass
 
@@ -21,31 +27,27 @@ class BookServices:
             bool: True if the book is created successfully or false
 
         Raises:
-            Exception: Handles errors outside of our control. Database errors
-            for example.
+            BookAlreadyExistsError: if the book already exists
+            DatabaseServiceError: For any database errors
+            Exception: Anything else
 
         Notes:
             This function will check if a book with the details passed in already
-            exists. If it's found it returns false otherwise it creates the book
-            object and adds it to the database.
+            exists. If it's found it returns BookAlreadyExistsError otherwise it creates the book
+            object and adds it to the database and then returns True
         """
+        conditions, values = self.build_conditions(book.filters())
+        verification = f"select * from book where {conditions}"
+        book_check = execute_query(verification, values)
+        if book_check:
+            raise BookAlreadyExistsError(f"Book already exists")
         try:
-            filters: dict[str, Any] = book.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            conditions = " and ".join(
-                [f"{k} = :{k}, {v} = %s" for k, v in filters.items()]
-            )
-            if not filters:
-                raise ValueError("You need to enter all values when creating book.")
-            book_check = execute_query(f"select * from book where {filters}")
-            if not book_check:
-                execute_query(book_insert, conditions)
-                return True
-        except Exception:
-            raise
-        return False
+            execute_query(book_insert, values)
+            return True
+        except Exception as e:
+            raise DatabaseServiceError("Failed to create book") from e
 
-    def get_book_details(self, book: Book) -> list[dict[str, Any]] | None:
+    def get_book_details(self, book: Book) -> list[dict[str, Any]]:
         """
         Searches the database for the details of the book passed in
 
@@ -56,30 +58,26 @@ class BookServices:
             list of dictionary's containing a string and then Any
 
         Raises:
-            Exception: handles any errors outside of our control such as database
-            errors
+            BookAlreadyExistsError: if the book already exists
+            DatabaseServiceError: For any database errors
+            Exception: Anything else
 
         Notes:
-            This function uses a dictionary comprehension to create a new dictionary
-            which filters out None values. We then pull from the database using the
+            This function pulls a book and it's attributes from the database using the
             details passed in. It will return the book and it's assosciated information.
 
         """
+        conditions, values = self.build_conditions(book.filters())
+        query = f"select * from book where {conditions}"
         try:
-            filters: dict[str, Any] = book.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError(
-                    "You need to pass in at least one value to get the details of a book"
-                )
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            book_details = f"select * from book where {conditions}"
-            values = tuple(filters.values())
-            return execute_query(book_details, values)
-        except Exception:
-            raise
+            get_book = execute_query(query, values)
+            if not get_book:
+                raise BookNotFoundError("Book not found in the database")
+            return get_book
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve book details") from e
 
-    def delete_book(self, book: Book) -> bool:
+    def delete_book(self, book: Book) -> None:
         """
         Attempts to delete a book from the database. It doesn't delete it, it just
         marks it as deleted in the database. It then updates the inventory table
@@ -94,50 +92,38 @@ class BookServices:
 
         Raises:
             ValueError: If no filters are provided, if the query returns no results, or if multiple rows are found.
-            Exception: For unexpected errors outside of our control such as database related issues
-
+            BookAlreadyExistsError: if the book already exists
+            DatabaseServiceError: For any database errors
+            Exception: Anything else
         Notes:
-        A dictionary comprehension is used to remove None values from the filters before building the query.
-        The function first verifies the existence of the book before attempting deletion.
-        Deletion only proceeds if exactly one matching book is found.
+        The function first verifies the existence of the book before attempting deletion. Deletion only proceeds if exactly one matching book is found.
+        The object isn't actually deleted, the deleted column is marked as True.
+        This way audit history is kept.
         """
+        conditions, values = self.build_conditions(book.filters())
+        verification_query = f"select * from book where {conditions}"
         try:
-            filters: dict[str, Any] = book.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError("At least one filter must be provided")
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            values = list(filters.values())
-            deletion_verification = f"select * from book where {conditions}"
-            rows = execute_query(deletion_verification, values)
+            rows = execute_query(verification_query, values)
             if not rows:
-                raise ValueError("Delete book query returned no results")
-            if len(rows) == 1:
-                delete_query = f"""
-                                update book
-                                set deleted = True
-                                where (
-                                    select * from book where {conditions}
-                                )
-                                """
-                execute_query(delete_query, values)
-                availability = f"""
-                    update inventory
-                    set is_available = False
-                    where (
-                    select *
-                    from book b
-                    where {conditions}
-                    left join inventory i
-                    on i.book_id - b.book_id
-                    )
-                    """
-                execute_query(availability, values)
-                return True
-            else:
+                raise BookNotFoundError("Delete book query returned no results")
+            if len(rows) > 1:
                 raise ValueError("Deletion aborted due to multiple rows being found")
-        except Exception:
-            raise
+            delete_query = f"""
+                            update book
+                            set deleted = True
+                            where {conditions}
+                            """
+            execute_query(delete_query, values)
+            availability = f"""
+                update inventory
+                set is_available = False
+                from book b
+                where i.book_id = b.book_id
+                and {conditions}
+                """
+            execute_query(availability, values)
+        except Exception as e:
+            raise DatabaseServiceError("Failed to delete book") from e
 
     def update_book_rating(self, new_rating: int, book: Book) -> bool:
         """
@@ -161,12 +147,7 @@ class BookServices:
 
         """
         try:
-            filters: dict[str, Any] = book.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError("At least one filter must be provided")
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            values = list(filters.values())
+            conditions, values = self.build_conditions(book.filters())
             find_book = f"select * from book where {conditions}"
             if find_book:
                 rows = execute_query(find_book, values)
@@ -187,6 +168,6 @@ class BookServices:
                     raise ValueError(
                         "Modification of rating aborted due to multiple rows being found"
                     )
-        except Exception:
-            raise
+        except Exception as e:
+            raise DatabaseServiceError("Failed to update book rating") from e
         return False

@@ -76,7 +76,7 @@ class UserServices:
 
     def delete_user(self, user: User) -> bool:
         """
-        Attempts to delete a user from the database
+        Attempts to delete a user from the database. Doesn't delete, it just updates the deleted field to yes
 
         Args:
             user (User): a User object - the class object is in data - classes - user.py
@@ -104,9 +104,17 @@ class UserServices:
             deletion_verification = f"select * from users where {conditions}"
             rows = execute_query(deletion_verification, values)
             if not rows:
-                raise ValueError("Delete user query returned no results")
+                raise ValueError(
+                    "Delete user query returned no results. No user found with that name"
+                )
             if len(rows) == 1:
-                delete_query = f"delete from users where {conditions}"
+                delete_query = f"""
+                                update user
+                                set deleted = True
+                                where (
+                                    select * from user where {conditions}
+                                )
+                                """
                 execute_query(delete_query, values)
                 return True
             else:

@@ -6,7 +6,8 @@ users_table = """
         last_name text not null,
         email_address text not null,
         phone_number bigint not null,
-        books_loaned text not null
+        books_loaned text not null,
+        deleted bool not null default false
     );
 """
 
@@ -17,14 +18,16 @@ users_insert = """
         last_name,
         email_address,
         phone_number,
-        books_loaned
+        books_loaned,
+        deleted
     ) values (
         :user_id,
         :first_name,
         :last_name,
         :email_address,
         :phone_number,
-        :books_loaned
+        :books_loaned,
+        :deleted
     );
 """
 

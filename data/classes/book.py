@@ -24,8 +24,8 @@ class Book:
     def filters(self) -> dict[str, Any]:
         return {
             "title": self.title,
-            "last_name": self.author,
-            "email_address": self.genre,
+            "author": self.author,
+            "genre": self.genre,
             "rating": self.rating,
         }
 
