@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 from data.dataclasses.db_dataclass import DB
 from data.database.models import book_table, users_table, inventory_table
+from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
@@ -44,7 +45,7 @@ def create_schema(
             trans.commit()
         except Exception as e:
             trans.rollback()
-            print(f"Create schema failed due to: {e}")
+            raise DatabaseServiceError("Create schema failed") from e
 
 
 def execute_query(
@@ -63,10 +64,9 @@ def execute_query(
                 rows: List[dict[str, Any]] = [dict(row) for row in result.fetchall()]
                 return rows
             trans.commit()
-            return []
         except Exception as e:
             trans.rollback()
-            raise e
+            raise DatabaseServiceError("Execute query failed") from e
 
 
 def create_schemas() -> None:
