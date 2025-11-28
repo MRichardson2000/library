@@ -12,3 +12,11 @@ class BookAlreadyExistsError(ServiceError):
 
 class DatabaseServiceError(ServiceError):
     pass
+
+
+class UserAlreadyExistsError(ServiceError):
+    pass
+
+
+class UserNotFoundError(ServiceError):
+    pass

@@ -37,8 +37,8 @@ class BookServices(BaseService):
             object and adds it to the database
         """
         conditions, values = self.build_conditions(book.filters())
-        verification = f"select * from book where {conditions}"
-        book_check = execute_query(verification, values)
+        query = f"select * from book where {conditions}"
+        book_check = execute_query(query, values)
         if book_check:
             raise BookAlreadyExistsError(f"Book already exists")
         try:

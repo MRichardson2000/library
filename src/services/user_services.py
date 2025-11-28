@@ -2,14 +2,20 @@ from __future__ import annotations
 from data.classes.user import User
 from data.database.dbconn import execute_query
 from data.database.models import users_insert
+from src.services.base_services import BaseService
+from src.services.exceptions import (
+    UserAlreadyExistsError,
+    DatabaseServiceError,
+    UserNotFoundError,
+)
 from typing import Any
 
 
-class UserServices:
+class UserServices(BaseService):
     def __init__(self) -> None:
         pass
 
-    def create_user(self, user: User) -> bool:
+    def create_user(self, user: User) -> None:
         """
         Create a new user record in the database if one does not exist already.
 
@@ -17,32 +23,27 @@ class UserServices:
             user (User): a User object - the class object is in data - classes - user.py
 
         Returns:
-            bool: True if the user was created and registered in the database successfully. Otherwise false
+            None: It just creates the user
 
         Raises:
-            Exception: handles any errors outside of our control - Database errors for example.
+            UserAlreadyExistsError: If the user already exists
+            DatabaseServiceError: for andy database errors
+            Exception: Anything else
 
         Notes:
-            This function will check if a user with the details passed in already exists, if a match isn't
-            found it's added into the database. Otherwise it returns false and does nothing.
+            This function will check if a user with the details passed in already exists, if a match isn't found it's added into the database.
         """
+        conditions, values = self.build_conditions(user.filters())
+        query = f"select * from users where {conditions}"
+        user_check = execute_query(query, values)
+        if user_check:
+            raise UserAlreadyExistsError("User already exists")
         try:
-            filters: dict[str, Any] = user.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            conditions = " and ".join(
-                [f"{k} = :{k}, {v} = %s" for k, v in filters.items()]
-            )
-            if not filters:
-                raise ValueError("All filters are required for creating a user")
-            user_check = execute_query(f"select * from users where {filters}")
-            if not user_check:
-                execute_query(users_insert, conditions)
-                return True
+            execute_query(users_insert, values)
         except Exception as e:
-            raise e
-        return False
+            raise DatabaseServiceError("Failed to create user") from e
 
-    def get_user_details(self, user: User) -> list[dict[str, Any]] | None:
+    def get_user_details(self, user: User) -> list[dict[str, Any]]:
         """
         Searches the database to get the details of the user passed in
 
@@ -50,77 +51,61 @@ class UserServices:
             user (User): a User object - the class object is in data - classes - user.py
 
         Returns:
-            list of dictionarys containing a string and then Any.
+            list[dict[str, Any]]: - a sql row with the user information
 
         Raises:
-            Exception: handles any errors outside of our control - Database errors for example.
+            UserNotFoundError: If the user is not found in the database
+            DatabaseServiceErrror: If there's an issue outside of our control e.g. a database
+            error
+            Exception: Anything else
 
         Notes:
-            This function uses a dictionary comprehension to create a new dictionary which removes
-            None values. We then pull from the database using the details passed in. It will return
-            a user and their assosciated information.
+            This function checks if a user exists with the details passed in. If a user
+            is found, the details of that user are returned.
         """
+        conditions, values = self.build_conditions(user.filters())
+        query = f"select * from users where {conditions}"
         try:
-            filters: dict[str, Any] = user.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError(
-                    "You need to pass in at least one value to get the details of a user"
-                )
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            user_details = f"select * from users where {conditions}"
-            values = tuple(filters.values())
-            return execute_query(user_details, values)
-        except Exception:
-            raise
+            get_user = execute_query(query, values)
+            if not get_user:
+                raise UserNotFoundError("User not found in the database")
+            return get_user
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve user details") from e
 
-    def delete_user(self, user: User) -> bool:
+    def delete_user(self, user: User) -> None:
         """
-        Attempts to delete a user from the database. Doesn't delete, it just updates the deleted field to yes
+        This functions updates the deleted column in the database to True. The user is
+        still in the system for audit purposes they are just marked as deleted.
 
         Args:
             user (User): a User object - the class object is in data - classes - user.py
 
         Returns:
-            bool: True if the user was successfully deleted otherwise false. Raises
-            an error if no matching user is found or if multiple matches exist.
+            None: It just updates the deleted column in the database
 
         Raises:
-            ValueError: If no filters are provided, if the query returns no results, or if multiple rows are found.
-            Exception: For unexpected errors outside of our control such as database related issues
 
         Notes:
-        A dictionary comprehension is used to remove None values from the filters before building the query.
-        The function first verifies the existence of the user before attempting deletion.
-        Deletion only proceeds if exactly one matching user is found.
+
         """
+
+        conditions, values = self.build_conditions(user.filters())
+        verification_query = f"select * from users where {conditions}"
         try:
-            filters: dict[str, Any] = user.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError("At least one filter must be provided")
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            values = list(filters.values())
-            deletion_verification = f"select * from users where {conditions}"
-            rows = execute_query(deletion_verification, values)
+            rows = execute_query(verification_query, values)
             if not rows:
-                raise ValueError(
-                    "Delete user query returned no results. No user found with that name"
-                )
-            if len(rows) == 1:
-                delete_query = f"""
-                                update user
-                                set deleted = True
-                                where (
-                                    select * from user where {conditions}
-                                )
-                                """
-                execute_query(delete_query, values)
-                return True
-            else:
+                raise UserNotFoundError("User not found, deletion aborted")
+            if len(rows) > 1:
                 raise ValueError("Deletion aborted due to multiple rows being found")
-        except Exception:
-            raise
+            delete_query = f"""
+                            update user
+                            set deleted = True
+                            where {conditions}
+                            """
+            execute_query(delete_query, values)
+        except Exception as e:
+            raise DatabaseServiceError("Failed to delete user") from e
 
     def check_borrow_eligibility(self, user: User) -> bool:
         """
