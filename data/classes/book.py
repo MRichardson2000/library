@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any
 
 
 class Book:
@@ -18,6 +18,14 @@ class Book:
 
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."
+
+    def filters(self) -> dict[str, Any]:
+        return {
+            "title": self.title,
+            "last_name": self.author,
+            "email_address": self.genre,
+            "rating": self.rating,
+        }
 
     def update_rating(self, new_rating: Union[int, float]) -> None:
         if not isinstance(new_rating, (int, float)):  # type: ignore

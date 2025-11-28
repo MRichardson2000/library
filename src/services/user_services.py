@@ -44,7 +44,7 @@ class UserServices:
             raise e
         return False
 
-    def get_user(self, user: User) -> list[dict[str, Any]] | None:
+    def get_user_details(self, user: User) -> list[dict[str, Any]] | None:
         """
         Searches the database to get the details of the user passed in
 
