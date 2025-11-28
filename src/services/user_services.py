@@ -67,14 +67,14 @@ class UserServices:
             filters = {k: v for k, v in filters.items() if v is not None}
             if not filters:
                 raise ValueError(
-                    "You need to pass in at least one value to find a user"
+                    "You need to pass in at least one value to get the details of a user"
                 )
             conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
             user_details = f"select * from users where {conditions}"
             values = tuple(filters.values())
             return execute_query(user_details, values)
-        except Exception as e:
-            raise e
+        except Exception:
+            raise
 
     def delete_user(self, user: User) -> bool:
         """

@@ -44,3 +44,37 @@ class BookServices:
         except Exception:
             raise
         return False
+
+    def get_book_details(self, book: Book) -> list[dict[str, Any]] | None:
+        """
+        Searches the database for the details of the book passed in
+
+        Args:
+            book (Book): a Book object - the class object is in data/classes/book.py
+
+        Returns:
+            list of dictionary's containing a string and then Any
+
+        Raises:
+            Exception: handles any errors outside of our control such as database
+            errors
+
+        Notes:
+            This function uses a dictionary comprehension to create a new dictionary
+            which filters out None values. We then pull from the database using the
+            details passed in. It will return the book and it's assosciated information.
+
+        """
+        try:
+            filters: dict[str, Any] = book.filters()
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError(
+                    "You need to pass in at least one value to get the details of a book"
+                )
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+            book_details = f"select * from book where {conditions}"
+            values = tuple(filters.values())
+            return execute_query(book_details, values)
+        except Exception:
+            raise
