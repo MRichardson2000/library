@@ -1,7 +1,5 @@
 from __future__ import annotations
 from data.classes.user import User
-
-# from data.classes.loan import Loan
 from data.database.dbconn import execute_query
 from data.database.models import users_insert
 from typing import Any
@@ -247,57 +245,3 @@ class UserServices:
                 return [{"no_overdue": "users_found"}]
         except Exception:
             raise
-
-    def audit_log(self) -> None:
-        """
-        .
-
-        Args:
-            user (User): a User object - the class object is in data - classes - user.py
-
-        Returns:
-
-
-        Raises:
-
-
-        Notes:
-
-        """
-        pass
-
-    def find_top_borrowers(self) -> None:
-        """
-        .
-
-        Args:
-            user (User): a User object - the class object is in data - classes - user.py
-
-        Returns:
-
-
-        Raises:
-
-
-        Notes:
-
-        """
-        pass
-
-    def longstanding_borrowers(self) -> None:
-        """
-        .
-
-        Args:
-            user (User): a User object - the class object is in data - classes - user.py
-
-        Returns:
-
-
-        Raises:
-
-
-        Notes:
-
-        """
-        pass
