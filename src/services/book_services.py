@@ -138,3 +138,55 @@ class BookServices:
                 raise ValueError("Deletion aborted due to multiple rows being found")
         except Exception:
             raise
+
+    def update_book_rating(self, new_rating: int, book: Book) -> bool:
+        """
+        Searches the database for the book passed in and attempts to update the rating.
+
+        Args:
+            new_rating: int - whatever the new rating is going to be
+            book (Book): a book object - the class object is in data/classes/book.py
+
+        Returns:
+            bool: True if the rating is updated, False if multiple rows are found
+
+        Raises:
+            ValueError: if the query returns no results or if multiple rows are found
+            Exception: For unexpected errors outside of our control such as database
+            issues.
+
+        Notes:
+            A book is pulled from the database and then we change the rating to
+            whatever is entered in. Then we return True if successful.
+
+        """
+        try:
+            filters: dict[str, Any] = book.filters()
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError("At least one filter must be provided")
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+            values = list(filters.values())
+            find_book = f"select * from book where {conditions}"
+            if find_book:
+                rows = execute_query(find_book, values)
+                if not rows:
+                    raise ValueError("Query returned no results, book not found")
+                if len(rows) == 1:
+                    rating = book.update_rating(new_rating)
+                    update_query = f"""
+                                    update book
+                                    set rating = {rating}
+                                    where (
+                                        select * from book where {conditions}
+                                    )
+                                    """
+                    execute_query(update_query, values)
+                    return True
+                else:
+                    raise ValueError(
+                        "Modification of rating aborted due to multiple rows being found"
+                    )
+        except Exception:
+            raise
+        return False
