@@ -106,7 +106,7 @@ class UserServices:
             deletion_verification = f"select * from users where {conditions}"
             rows = execute_query(deletion_verification, values)
             if not rows:
-                raise ValueError("Query returned no results")
+                raise ValueError("Delete user query returned no results")
             if len(rows) == 1:
                 delete_query = f"delete from users where {conditions}"
                 execute_query(delete_query, values)

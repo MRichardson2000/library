@@ -78,3 +78,43 @@ class BookServices:
             return execute_query(book_details, values)
         except Exception:
             raise
+
+    def delete_book(self, book: Book) -> bool:
+        """
+        Attempts to delete a book from the database
+
+        Args:
+            book (Book): a Book object - the class object is in data - classes - book.py
+
+        Returns:
+            bool: True if the book was successfully deleted otherwise false. Raises
+            an error if no matching book is found or if multiple matches exist.
+
+        Raises:
+            ValueError: If no filters are provided, if the query returns no results, or if multiple rows are found.
+            Exception: For unexpected errors outside of our control such as database related issues
+
+        Notes:
+        A dictionary comprehension is used to remove None values from the filters before building the query.
+        The function first verifies the existence of the book before attempting deletion.
+        Deletion only proceeds if exactly one matching book is found.
+        """
+        try:
+            filters: dict[str, Any] = book.filters()
+            filters = {k: v for k, v in filters.items() if v is not None}
+            if not filters:
+                raise ValueError("At least one filter must be provided")
+            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
+            values = list(filters.values())
+            deletion_verification = f"select * from book where {conditions}"
+            rows = execute_query(deletion_verification, values)
+            if not rows:
+                raise ValueError("Delete book query returned no results")
+            if len(rows) == 1:
+                delete_query = f"delete from book where {conditions}"
+                execute_query(delete_query, values)
+                return True
+            else:
+                raise ValueError("Deletion aborted due to multiple rows being found")
+        except Exception:
+            raise
