@@ -35,7 +35,8 @@ book_table = """
         title text not null,
         author text not null,
         genre text not null,
-        rating text not null
+        rating text not null,
+        deleted bool not null default false
     );
 """
 
@@ -45,13 +46,15 @@ book_insert = """
         title,
         author,
         genre,
-        rating
+        rating,
+        deleted
     ) values (
         :book_id,
         :title,
         :author,
         :genre,
-        :rating
+        :rating,
+        :deleted
     );
 """
 

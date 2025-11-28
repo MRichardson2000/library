@@ -9,12 +9,14 @@ class Book:
         author: str,
         genre: str,
         rating: Union[int, float],
+        deleted: bool = False,
     ) -> None:
         self.book_id = book_id
         self.title = title
         self.author = author
         self.genre = genre
         self.rating = rating
+        self.deleted = deleted
 
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."

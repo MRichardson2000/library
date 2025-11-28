@@ -81,7 +81,8 @@ class BookServices:
 
     def delete_book(self, book: Book) -> bool:
         """
-        Attempts to delete a book from the database
+        Attempts to delete a book from the database. It doesn't delete it, it just
+        marks it as deleted in the database
 
         Args:
             book (Book): a Book object - the class object is in data - classes - book.py
@@ -111,7 +112,13 @@ class BookServices:
             if not rows:
                 raise ValueError("Delete book query returned no results")
             if len(rows) == 1:
-                delete_query = f"delete from book where {conditions}"
+                delete_query = f"""
+                                update book
+                                set deleted = True
+                                where (
+                                    select * from book where {conditions}
+                                )
+                                """
                 execute_query(delete_query, values)
                 return True
             else:
