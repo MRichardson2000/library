@@ -13,6 +13,7 @@ class Loan:
         loaned: bool = False,
         loan_time: datetime | None = None,
         late_fee: bool = False,
+        overdue_return: bool = False,
     ) -> None:
         self.book = book
         self.user = user
@@ -20,6 +21,7 @@ class Loan:
         self.loaned = loaned
         self.loan_time = loan_time
         self.late_fee = late_fee
+        self.overdue_return = overdue_return
 
     def borrow_book(self, now: Optional[datetime] = None) -> None:
         if self.book.title and not self.loaned:

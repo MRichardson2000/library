@@ -1,6 +1,7 @@
 from __future__ import annotations
 from data.classes.user import User
-from data.classes.loan import Loan
+
+# from data.classes.loan import Loan
 from data.database.dbconn import execute_query
 from data.database.models import users_insert
 from typing import Any
@@ -205,23 +206,47 @@ class UserServices:
             raise
         return 0.0
 
-    def list_overdue_users(self) -> None:
+    def list_overdue_users(self) -> list[dict[str, Any]]:
         """
-        .
+        Retrieves all users from the database that have overdue books that
+        need returning.
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            No args here, just a query to pull data out that lists users who
+            late books that need handing in.
 
         Returns:
-
+            list[dict[str, Any]]: returns with details if any are present.
+            Otherwise it returns an empty list of dicts that states no
+            values were found.
 
         Raises:
-
+            Exception: To handle if there's an error with the database connection
+            that's outside of our control
 
         Notes:
+            Simple yet effective query to list the users that have overdue_returns
+            resulting in late fees due to be paid.
 
         """
-        pass
+        try:
+            overdue = execute_query(
+                """
+                select u.first_name,
+                       u.last_name,
+                       u.email_address,
+                       u.phone_number
+                from users u
+                left join loan l on l.user_id=u.user_id
+                having l.overdue_return = True
+                """
+            )
+            if overdue:
+                return overdue
+            else:
+                return [{"no_overdue": "users_found"}]
+        except Exception:
+            raise
 
     def audit_log(self) -> None:
         """

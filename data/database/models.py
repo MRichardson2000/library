@@ -63,7 +63,8 @@ loan_table = """
         loaned boolean not null default false,
         loan_time timestamp,
         due_date timestamp,
-        late_fee boolean not null default false
+        late_fee boolean not null default false,
+        overdue_return bool not null default false
     );
 """
 
@@ -75,7 +76,8 @@ loan_insert = """
         loaned,
         loan_time,
         due_date,
-        late_fee
+        late_fee,
+        overdue_return
     ) values (
         :book_id,
         :user_id,
@@ -83,7 +85,8 @@ loan_insert = """
         :loaned,
         :loan_time,
         :due_date,
-        :late_fee
+        :late_fee,
+        :overdue_return
     );
 """
 
