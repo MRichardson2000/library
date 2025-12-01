@@ -74,7 +74,24 @@ class UserServices(BaseService):
             raise DatabaseServiceError("Failed to retrieve user details") from e
 
     def change_surname(self, new_surname: str) -> None:
-        pass
+        conditions, values = self.build_conditions(self.user.filters())
+        query = f"select * from users where {conditions}"
+        try:
+            rows = execute_query(query, values)
+            if not rows:
+                raise UserNotFoundError("Unable to find user, surname change aborted")
+            if len(rows) > 1:
+                raise ValueError(
+                    "Modification aborted due to multiple rows being detected"
+                )
+            update_query = f"""
+                            update user
+                            set last_name = {new_surname}
+                            where {conditions}
+                            """
+            execute_query(update_query)
+        except Exception as e:
+            raise DatabaseServiceError("Failed to change users surname") from e
 
     def delete_user(self) -> None:
         """
