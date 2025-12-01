@@ -74,6 +74,25 @@ class UserServices(BaseService):
             raise DatabaseServiceError("Failed to retrieve user details") from e
 
     def change_surname(self, new_surname: str) -> None:
+        """
+        Changes the users surname in the database
+
+        Args:
+            new_surname: the persons new surname
+
+        Returns:
+            None: just updates the surname
+
+        Raises:
+            UserNotFoundError: If no users are found
+            ValueError: If multiple rows are found to prevent duplicate columns being modified.
+            Exception: Anything else
+            DatabaseServiceError: To handle if there's an error with the database connection
+            that's outside of our control
+
+        Notes:
+            Updates the users surname in the database
+        """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.last_name = new_surname
@@ -95,6 +114,25 @@ class UserServices(BaseService):
             raise DatabaseServiceError("Failed to change users surname") from e
 
     def email_change(self, new_email_address: str) -> None:
+        """
+        Changes the users email address in the database
+
+        Args:
+            new_email_address: the persons new email address
+
+        Returns:
+            None: just updates the email address
+
+        Raises:
+            UserNotFoundError: If no users are found
+            ValueError: If multiple rows are found to prevent duplicate columns being modified.
+            Exception: Anything else
+            DatabaseServiceError: To handle if there's an error with the database connection
+            that's outside of our control
+
+        Notes:
+            Updates the users email address in the database
+        """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.email_address = new_email_address
@@ -116,6 +154,25 @@ class UserServices(BaseService):
             raise DatabaseServiceError("Failed to change email address") from e
 
     def phone_number_change(self, new_phone_number: int) -> None:
+        """
+        Changes the users phone number in the database
+
+        Args:
+            new_phone_number: the persons new number
+
+        Returns:
+            None: just updates the number
+
+        Raises:
+            UserNotFoundError: If no users are found
+            ValueError: If multiple rows are found to prevent duplicate columns being modified.
+            Exception: Anything else
+            DatabaseServiceError: To handle if there's an error with the database connection
+            that's outside of our control
+
+        Notes:
+            Updates the users phone number in the database
+        """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.phone_number = new_phone_number
@@ -245,7 +302,7 @@ class UserServices(BaseService):
                 l.accumulated_late_fee 
                 from users u
                 left join loan l on u.user_id = l.user_id
-                where {conditions} = {values}
+                where {conditions}
                 group by u.user_id, u.first_name, u.last_name
                 """
         try:
@@ -303,21 +360,40 @@ class UserServices(BaseService):
             raise DatabaseServiceError("Failed to retrieve overdue users") from e
 
     def see_books_on_loan(self) -> list[dict[str, Any]]:
+        """
+        Retrieves all books on loan from the database for the user passed in.
+
+        Args:
+            No args here, just a query to pull data out that lists the books
+            that are loaned by a certain user.
+
+        Returns:
+            list[dict[str, Any]]: returns with details if any are present.
+            Otherwise it returns an empty list.
+
+        Raises:
+            UserNotFoundError: If no users are found
+            ValueError: If no books on loan are found
+            Exception: Anything else
+            DatabaseServiceError: To handle if there's an error with the database connection
+            that's outside of our control
+
+        Notes:
+            Simple yet effective query to list the books the user has on loan.
+        """
         conditions, values = self.build_conditions(self.user.filters())
-        find_user_query = f"select * from users where {conditions} = {values}"
+        find_user_query = f"select * from users where {conditions}"
         try:
             if not find_user_query:
                 raise UserNotFoundError(
                     "Unable to find user, therefore unable to find books on loan"
                 )
-            find_books_query = (
-                f"select books_loaned from users where {conditions} = {values}"
-            )
+            find_books_query = f"select books_loaned from users where {conditions}"
             if not find_books_query:
                 raise ValueError(
                     f"{self.user.first_name} {self.user.last_name} does not have any books on loan"
                 )
-            return execute_query(find_books_query) or []
+            return execute_query(find_books_query, values) or []
         except Exception as e:
             raise DatabaseServiceError(
                 f"Unable to see books on loan for {self.user.first_name} {self.user.last_name}"

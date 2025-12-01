@@ -60,8 +60,8 @@ class Loan:
             self.late_fee = False
             self.accumulated_late_fee -= 2.50
 
-    def get_user(self) -> tuple[str, str]:
+    def get_user(self) -> Optional[tuple[str, str]]:
         if self.loaned:
             return self.user.first_name, self.user.last_name
         else:
-            return ("nouser", "found")
+            return None
