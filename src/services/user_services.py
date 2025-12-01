@@ -12,15 +12,15 @@ from typing import Any
 
 
 class UserServices(BaseService):
-    def __init__(self) -> None:
-        pass
+    def __init__(self, user: User) -> None:
+        self.user = user
 
-    def create_user(self, user: User) -> None:
+    def create_user(self) -> None:
         """
         Create a new user record in the database if one does not exist already.
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
 
         Returns:
             None: It just creates the user
@@ -33,7 +33,7 @@ class UserServices(BaseService):
         Notes:
             This function will check if a user with the details passed in already exists, if a match isn't found it's added into the database.
         """
-        conditions, values = self.build_conditions(user.filters())
+        conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         user_check = execute_query(query, values)
         if user_check:
@@ -43,12 +43,12 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to create user") from e
 
-    def get_user_details(self, user: User) -> list[dict[str, Any]]:
+    def get_user_details(self) -> list[dict[str, Any]]:
         """
         Searches the database to get the details of the user passed in
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
 
         Returns:
             list[dict[str, Any]]: - a sql row with the user information
@@ -63,7 +63,7 @@ class UserServices(BaseService):
             This function checks if a user exists with the details passed in. If a user
             is found, the details of that user are returned.
         """
-        conditions, values = self.build_conditions(user.filters())
+        conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
             get_user = execute_query(query, values)
@@ -73,13 +73,13 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve user details") from e
 
-    def delete_user(self, user: User) -> None:
+    def delete_user(self) -> None:
         """
         This functions updates the deleted column in the database to True. The user is
         still in the system for audit purposes they are just marked as deleted.
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
 
         Returns:
             None: It just updates the deleted column in the database
@@ -90,7 +90,7 @@ class UserServices(BaseService):
 
         """
 
-        conditions, values = self.build_conditions(user.filters())
+        conditions, values = self.build_conditions(self.user.filters())
         verification_query = f"select * from users where {conditions}"
         try:
             rows = execute_query(verification_query, values)
@@ -107,12 +107,12 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to delete user") from e
 
-    def check_borrow_eligibility(self, user: User) -> bool:
+    def check_borrow_eligibility(self) -> bool:
         """
         Checks if someone is eligible to borrow a book. The current loan limit is 5 books but this can be modified
 
         Args:
-            user (User): a User object - the class object is in data - classes - user.py
+            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
 
         Returns:
             bool: Either true or false if they already have 5 loaned books
@@ -128,7 +128,7 @@ class UserServices(BaseService):
             they can loan another. The max is 5.
 
         """
-        conditions, values = self.build_conditions(user.filters())
+        conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
             get_user = execute_query(query, values)
@@ -140,36 +140,34 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve borrow eligibility") from e
 
-    def calculate_outstanding_late_fees(self, user: User) -> float:
+    def calculate_outstanding_late_fees(self) -> float:
         """
         Calculate the total outstanding late fees for a given user.
 
         This method builds a SQL query based on the filters provided by the
-        `User` object, retrieves the accumulated late fees from the `loan`
-        table, and returns the total amount owed. If no filters are provided,
-        a ValueError is raised. If no matching records are found, the method
-        returns 0.0.
+        User object, retrieves the accumulated late fees from the loan
+        tables accumulated fees column, and returns the total amount owed.
 
         Args:
-            user (User): A User object (defined in `data/classes/user.py`)
-                that provides filter criteria through its `filters()` method.
+            user (User): Initialised in the init method:  A User object defined in data/classes/user.py
+                that provides filter criteria through its filters() method.
 
         Returns:
-            float: The total outstanding late fee for the user. Returns 0.0
-            if no records are found.
+            float: The total outstanding late fee for the user.
 
         Raises:
             DatabaseServiceError: if there's an issue outside of our control with the database connection.
+            ValueError: If the user is not found
             Exception: Propagates any exceptions raised during query execution.
 
         Notes:
-            - The query joins the `users` table with the `loan` table on
-            `user_id`.
-            - Filters are dynamically applied to the WHERE clause based on
-            non-null values returned by `user.filters()`.
+            The query joins the users table with the loan table on
+            user_id.
+            Filters are dynamically applied to the WHERE clause based on
+            non-null values returned by self.user.filters().
             The query then shows the outstanding late fees
         """
-        conditions, values = self.build_conditions(user.filters())
+        conditions, values = self.build_conditions(self.user.filters())
         query = f"""
                 select u.user_id, 
                 u.first_name, 
@@ -182,12 +180,14 @@ class UserServices(BaseService):
                 """
         try:
             late_fee = execute_query(query, values)
-            if late_fee:
-                total_fee = late_fee[0].get("l.accumulated_late_fee", 0)
-                return total_fee
+            if not late_fee:
+                raise ValueError("At least one filter must be passed in")
+            total_fee = late_fee[0].get("l.accumulated_late_fee", 0)
+            return total_fee
         except Exception as e:
-            raise DatabaseServiceError("Failed to retrieve outstanding late fees") from e
-        return 0.0
+            raise DatabaseServiceError(
+                "Failed to retrieve outstanding late fees"
+            ) from e
 
     def list_overdue_users(self) -> list[dict[str, Any]]:
         """
@@ -204,7 +204,8 @@ class UserServices(BaseService):
             values were found.
 
         Raises:
-            Exception: To handle if there's an error with the database connection
+            Exception: Anything else
+            DatabaseServiceError: To handle if there's an error with the database connection
             that's outside of our control
 
         Notes:
@@ -228,5 +229,5 @@ class UserServices(BaseService):
                 return overdue
             else:
                 return [{"no_overdue": "users_found"}]
-        except Exception:
-            raise
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve overdue users") from e
