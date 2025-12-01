@@ -109,7 +109,7 @@ class UserServices(BaseService):
 
     def check_borrow_eligibility(self, user: User) -> bool:
         """
-        Checks if someone is eligible to borrow a book. The current loan limit is 5 books
+        Checks if someone is eligible to borrow a book. The current loan limit is 5 books but this can be modified
 
         Args:
             user (User): a User object - the class object is in data - classes - user.py
@@ -118,8 +118,9 @@ class UserServices(BaseService):
             bool: Either true or false if they already have 5 loaned books
 
         Raises:
-            ValueError: if no filters are provided
-            Exception: if an error outside of our control happens
+            UserNotFoundError: if no user is found in the database
+            DatabaseServiceError: If there's an issue outside of our control involving the database
+            Exception: Anything else
 
         Notes:
             We find the users and then look for the books loaned column. If the value is
@@ -127,19 +128,17 @@ class UserServices(BaseService):
             they can loan another. The max is 5.
 
         """
+        conditions, values = self.build_conditions(user.filters())
+        query = f"select * from users where {conditions}"
         try:
-            filters: dict[str, Any] = user.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError("At least one filter must be provided")
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            values = list(filters.values())
-            get_user = execute_query(f"select * from users where {conditions}", values)
-            if get_user and get_user[0].get("books_loaned", 0) > 5:
+            get_user = execute_query(query, values)
+            if not get_user:
+                raise UserNotFoundError("User not found in the database")
+            if get_user[0].get("books_loaned", 0) > 5:
                 return False
             return True
-        except Exception:
-            raise
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve borrow eligibility") from e
 
     def calculate_outstanding_late_fees(self, user: User) -> float:
         """
