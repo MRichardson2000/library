@@ -75,9 +75,11 @@ class UserServices(BaseService):
 
     def change_surname(self, new_surname: str) -> None:
         conditions, values = self.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
+        find_user_query = f"select * from users where {conditions}"
+        last_name = self.user.last_name
+        last_name = new_surname
         try:
-            rows = execute_query(query, values)
+            rows = execute_query(find_user_query, values)
             if not rows:
                 raise UserNotFoundError("Unable to find user, surname change aborted")
             if len(rows) > 1:
@@ -86,12 +88,34 @@ class UserServices(BaseService):
                 )
             update_query = f"""
                             update user
-                            set last_name = {new_surname}
+                            set last_name = {last_name}
                             where {conditions}
                             """
             execute_query(update_query)
         except Exception as e:
             raise DatabaseServiceError("Failed to change users surname") from e
+
+    def new_email(self, new_email_address: str) -> None:
+        conditions, values = self.build_conditions(self.user.filters())
+        find_user_query = f"select * from users where {conditions}"
+        email = self.user.email_address
+        email = new_email_address
+        try:
+            rows = execute_query(find_user_query, values)
+            if not rows:
+                raise UserNotFoundError("Unable to find user, email change aborted")
+            if len(rows) > 1:
+                raise ValueError(
+                    "Modification aborted due to multiple rows being detected"
+                )
+            update_query = f"""
+                            update user
+                            set email_address = {email}
+                            where {conditions}
+                            """
+            execute_query(update_query)
+        except Exception as e:
+            raise DatabaseServiceError("Failed to change email address") from e
 
     def delete_user(self) -> None:
         """
