@@ -73,6 +73,9 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve user details") from e
 
+    def change_surname(self, new_surname: str) -> None:
+        pass
+
     def delete_user(self) -> None:
         """
         This functions updates the deleted column in the database to True. The user is
@@ -85,8 +88,13 @@ class UserServices(BaseService):
             None: It just updates the deleted column in the database
 
         Raises:
+            UserNotFoundError: If the user doesn't exist in the database
+            DatabaseServiceError: Database errors outside of our control
+            Exception: Anything else
 
         Notes:
+            We check if the users there, if they are we check and make sure only 1 row is pulled from the database, if multiple rows are pulled the deletion
+            aborts as only 1 should be visible. then we update the deleted field to true for that user.
 
         """
 
