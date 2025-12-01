@@ -159,7 +159,7 @@ class UserServices(BaseService):
             if no records are found.
 
         Raises:
-            ValueError: If no filters are provided by the User object.
+            DatabaseServiceError: if there's an issue outside of our control with the database connection.
             Exception: Propagates any exceptions raised during query execution.
 
         Notes:
@@ -167,18 +167,10 @@ class UserServices(BaseService):
             `user_id`.
             - Filters are dynamically applied to the WHERE clause based on
             non-null values returned by `user.filters()`.
-            - The query groups results by user details to ensure unique
-            aggregation.
+            The query then shows the outstanding late fees
         """
-
-        try:
-            filters: dict[str, Any] = user.filters()
-            filters = {k: v for k, v in filters.items() if v is not None}
-            if not filters:
-                raise ValueError("At least one filter must be provided")
-            conditions = " and ".join([f"{k} = %s" for k in filters.keys()])
-            values = list(filters.values())
-            query = f"""
+        conditions, values = self.build_conditions(user.filters())
+        query = f"""
                 select u.user_id, 
                 u.first_name, 
                 u.last_name,
@@ -188,12 +180,13 @@ class UserServices(BaseService):
                 where {conditions}
                 group by u.user_id, u.first_name, u.last_name
                 """
-            result = execute_query(query, values)
-            if result:
-                total_fee = result[0].get("l.accumulated_late_fee", 0)
+        try:
+            late_fee = execute_query(query, values)
+            if late_fee:
+                total_fee = late_fee[0].get("l.accumulated_late_fee", 0)
                 return total_fee
-        except Exception:
-            raise
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve outstanding late fees") from e
         return 0.0
 
     def list_overdue_users(self) -> list[dict[str, Any]]:
