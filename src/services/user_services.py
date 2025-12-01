@@ -245,7 +245,7 @@ class UserServices(BaseService):
                 l.accumulated_late_fee 
                 from users u
                 left join loan l on u.user_id = l.user_id
-                where {conditions}
+                where {conditions} = {values}
                 group by u.user_id, u.first_name, u.last_name
                 """
         try:
@@ -301,3 +301,24 @@ class UserServices(BaseService):
                 return [{"no_overdue": "users_found"}]
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve overdue users") from e
+
+    def see_books_on_loan(self) -> list[dict[str, Any]]:
+        conditions, values = self.build_conditions(self.user.filters())
+        find_user_query = f"select * from users where {conditions} = {values}"
+        try:
+            if not find_user_query:
+                raise UserNotFoundError(
+                    "Unable to find user, therefore unable to find books on loan"
+                )
+            find_books_query = (
+                f"select books_loaned from users where {conditions} = {values}"
+            )
+            if not find_books_query:
+                raise ValueError(
+                    f"{self.user.first_name} {self.user.last_name} does not have any books on loan"
+                )
+            return execute_query(find_books_query) or []
+        except Exception as e:
+            raise DatabaseServiceError(
+                f"Unable to see books on loan for {self.user.first_name} {self.user.last_name}"
+            ) from e
