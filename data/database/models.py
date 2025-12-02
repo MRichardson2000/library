@@ -34,30 +34,26 @@ users_insert = """
 book_table = """
     create table if not exists book (
         unique_id bigserial primary key,
-        book_id int not null unique,
+        book_id serial unique not null,
         title text not null,
         author text not null,
         genre text not null,
-        rating text not null,
+        rating int not null,
         deleted bool not null default false
     );
 """
 
 book_insert = """
     insert into book (
-        book_id,
         title,
         author,
         genre,
-        rating,
-        deleted
+        rating
     ) values (
-        :book_id,
         :title,
         :author,
         :genre,
-        :rating,
-        :deleted
+        :rating
     );
 """
 

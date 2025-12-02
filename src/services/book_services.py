@@ -2,6 +2,7 @@ from __future__ import annotations
 from data.classes.book import Book
 from data.database.dbconn import execute_query
 from data.database.models import book_insert
+from data.dataclasses.db_dataclass import DB
 from src.services.base_services import BaseService
 from src.services.exceptions import (
     BookAlreadyExistsError,
@@ -12,8 +13,9 @@ from typing import Any
 
 
 class BookServices(BaseService):
-    def __init__(self, book: Book) -> None:
+    def __init__(self, book: Book, db: DB) -> None:
         self.book = book
+        self.db = db
 
     def create_book(self) -> None:
         """
@@ -38,11 +40,11 @@ class BookServices(BaseService):
         """
         conditions, values = self.build_conditions(self.book.filters())
         query = f"select * from book where {conditions}"
-        book_check = execute_query(query, values)
+        book_check = execute_query(query, values, self.db)
         if book_check:
             raise BookAlreadyExistsError(f"Book already exists")
         try:
-            execute_query(book_insert, values)
+            execute_query(book_insert, values, self.db)
         except Exception as e:
             raise DatabaseServiceError("Failed to create book") from e
 
@@ -69,7 +71,7 @@ class BookServices(BaseService):
         conditions, values = self.build_conditions(self.book.filters())
         query = f"select * from book where {conditions}"
         try:
-            get_book = execute_query(query, values)
+            get_book = execute_query(query, values, self.db)
             if not get_book:
                 raise BookNotFoundError("Book not found in the database")
             return get_book
@@ -147,18 +149,18 @@ class BookServices(BaseService):
         conditions, values = self.build_conditions(self.book.filters())
         find_book = f"select * from book where {conditions}"
         try:
-            if find_book:
-                rows = execute_query(find_book, values)
-                if not rows:
-                    raise BookNotFoundError("Query returned no results, book not found")
-                if len(rows) > 1:
-                    raise ValueError("Update aborted due to multiple rows being found")
-                rating = self.book.update_rating(new_rating)
-                update_query = f"""
-                                update book
-                                set rating = {rating}
-                                where {conditions}
-                                """
-                execute_query(update_query, values)
+            rows = execute_query(find_book, values)
+            if not rows:
+                raise BookNotFoundError("Query returned no results, book not found")
+            if len(rows) > 1:
+                raise ValueError("Update aborted due to multiple rows being found")
+            self.book.update_rating(new_rating)
+            update_query = f"""
+                            update book
+                            set rating = :rating
+                            where {conditions}
+                            """
+            values["rating"] = new_rating
+            execute_query(update_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to update book rating") from e

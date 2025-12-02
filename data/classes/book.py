@@ -1,10 +1,10 @@
-from typing import Union, Any
+from typing import Union, Any, Optional
 
 
 class Book:
     def __init__(
         self,
-        book_id: int,
+        book_id: Optional[int],
         title: str,
         author: str,
         genre: str,
@@ -21,13 +21,20 @@ class Book:
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."
 
-    def filters(self) -> dict[str, Any]:
-        return {
+    def filters(
+        self, include_id: bool = False, include_deleted: bool = False
+    ) -> dict[str, Any]:
+        data: dict[str, Any] = {
             "title": self.title,
             "author": self.author,
             "genre": self.genre,
             "rating": self.rating,
         }
+        if include_id:
+            data["book_id"] = self.book_id
+        if include_deleted:
+            data["deleted"] = self.deleted
+        return data
 
     def update_rating(self, new_rating: Union[int, float]) -> None:
         if not isinstance(new_rating, (int, float)):  # type: ignore

@@ -5,7 +5,7 @@ from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
-from typing import Optional, Any, List, Union, Sequence
+from typing import Optional, Any, Union, Sequence
 
 
 def load_env(testing: bool = False) -> DB:
@@ -61,8 +61,8 @@ def execute_query(
         try:
             result = conn.execute(sa.text(query), params or {})
             if query.strip().lower().startswith("select"):
-                rows: List[dict[str, Any]] = [dict(row) for row in result.fetchall()]
-                return rows
+                rows = result.mappings().all()
+                return [dict(r) for r in rows]
             trans.commit()
         except Exception as e:
             trans.rollback()
