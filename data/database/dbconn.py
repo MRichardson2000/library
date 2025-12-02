@@ -70,7 +70,7 @@ def execute_query(
 
 
 def create_schemas() -> None:
-    db_details = load_env()
+    db_details = load_env(testing=True)
     create_schema(db_details, users_table)
     create_schema(db_details, book_table)
     create_schema(db_details, loan_table)
