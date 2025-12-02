@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from data.dataclasses.db_dataclass import DB
-from data.database.models import book_table, users_table, inventory_table
+from data.database.models import book_table, users_table, inventory_table, loan_table
 from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
@@ -73,6 +73,7 @@ def create_schemas() -> None:
     db_details = load_env()
     create_schema(db_details, users_table)
     create_schema(db_details, book_table)
+    create_schema(db_details, loan_table)
     create_schema(db_details, inventory_table)
 
 
