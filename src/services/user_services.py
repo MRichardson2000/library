@@ -12,16 +12,12 @@ from src.services.exceptions import (
 from typing import Any
 
 
-class UserServices():
+class UserServices:
     def __init__(self, repository: UserRepository) -> None:
         self.repository = repository
 
     def create_user(
-            self,
-            first_name: str,
-            last_name: str,
-            email_address: str,
-            phone_number: int
+        self, first_name: str, last_name: str, email_address: str, phone_number: int
     ) -> UserORM:
         self.repository.assert_not_exists_by_email(email_address)
 
@@ -29,7 +25,7 @@ class UserServices():
             first_name=first_name,
             last_name=last_name,
             email_address=email_address,
-            phone_number=phone_number
+            phone_number=phone_number,
         )
         try:
             self.repository.insert(new_user)

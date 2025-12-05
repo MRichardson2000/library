@@ -115,4 +115,3 @@ inventory_insert = """
         :is_available
     );
 """
-

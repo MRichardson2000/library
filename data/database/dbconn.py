@@ -1,7 +1,11 @@
 from dotenv import load_dotenv
 from data.dataclasses.db_dataclass import DB
-from data.database.orm_models import Base
-from data.database.sql_models import book_table, users_table, inventory_table, loan_table
+from data.database.sql_models import (
+    book_table,
+    users_table,
+    inventory_table,
+    loan_table,
+)
 from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
@@ -74,7 +78,8 @@ def execute_query(
         except Exception as e:
             trans.rollback()
             raise DatabaseServiceError("Execute query failed") from e
-        
+
+
 def create_schemas() -> None:
     db_details = load_env(testing=True)
     create_schema(db_details, users_table)
