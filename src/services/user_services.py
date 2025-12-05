@@ -1,7 +1,8 @@
 from __future__ import annotations
-from data.classes.user import User
 from data.database.dbconn import execute_query
-from data.database.models import users_insert
+from data.database.sql_models import users_insert
+from data.database.orm_models import UserORM
+from src.repositories.user_repository import UserRepository
 from src.services.base_services import BaseService
 from src.services.exceptions import (
     UserAlreadyExistsError,
@@ -11,27 +12,30 @@ from src.services.exceptions import (
 from typing import Any
 
 
-class UserServices(BaseService):
-    def __init__(self, user: User) -> None:
-        self.user = user
+class UserServices():
+    def __init__(self, repository: UserRepository) -> None:
+        self.repository = repository
 
-    def create_user(self) -> None:
-        """
-        Create a new user record in the database if one does not already exist.
+    def create_user(
+            self,
+            first_name: str,
+            last_name: str,
+            email_address: str,
+            phone_number: int
+    ) -> UserORM:
+        self.repository.assert_not_exists_by_email(email_address)
 
-        Raises:
-            UserAlreadyExistsError: If a user with the same details exists.
-            DatabaseServiceError: If a database operation fails.
-        """
-        conditions, values = self.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
-        user_check = execute_query(query, values)
-        if user_check:
-            raise UserAlreadyExistsError("User already exists")
+        new_user = UserORM(
+            first_name=first_name,
+            last_name=last_name,
+            email_address=email_address,
+            phone_number=phone_number
+        )
         try:
-            execute_query(users_insert, values)
+            self.repository.insert(new_user)
         except Exception as e:
             raise DatabaseServiceError("Failed to create user") from e
+        return new_user
 
     def get_user_details(self) -> list[dict[str, Any]]:
         """
@@ -44,7 +48,7 @@ class UserServices(BaseService):
             UserNotFoundError: If no user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
             get_user = execute_query(query, values)
@@ -66,7 +70,7 @@ class UserServices(BaseService):
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.last_name = new_surname
         try:
@@ -98,7 +102,7 @@ class UserServices(BaseService):
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.email_address = new_email_address
         try:
@@ -130,7 +134,7 @@ class UserServices(BaseService):
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.phone_number = new_phone_number
         try:
@@ -160,7 +164,7 @@ class UserServices(BaseService):
             UserNotFoundError: If the user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         verification_query = f"select * from users where {conditions}"
         try:
             rows = execute_query(verification_query, values)
@@ -188,7 +192,7 @@ class UserServices(BaseService):
             UserNotFoundError: If no user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
             get_user = execute_query(query, values)
@@ -211,7 +215,7 @@ class UserServices(BaseService):
             ValueError: If the user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         query = f"""
                 select u.user_id, 
                 u.first_name, 
@@ -274,7 +278,7 @@ class UserServices(BaseService):
             ValueError: If no books on loan are found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = self.build_conditions(self.user.filters())
+        rows = self.repository.find_by_filters(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         try:
             if not find_user_query:

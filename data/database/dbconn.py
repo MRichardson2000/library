@@ -1,10 +1,12 @@
 from dotenv import load_dotenv
 from data.dataclasses.db_dataclass import DB
-from data.database.models import book_table, users_table, inventory_table, loan_table
+from data.database.orm_models import Base
+from data.database.sql_models import book_table, users_table, inventory_table, loan_table
 from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import sessionmaker, Session
 from typing import Optional, Any, Union, Sequence
 
 
@@ -31,7 +33,12 @@ def get_engine(db_details: DB) -> sa.Engine:
         f"postgresql://{db_details.db_user}:{db_details.db_password}"
         f"@{db_details.db_host}:{db_details.db_port}/{db_details.db_name}"
     )
-    return sa.create_engine(url)
+    return sa.create_engine(url, echo=False, future=True)
+
+
+def get_session(engine: sa.Engine) -> sessionmaker[Session]:
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    return SessionLocal
 
 
 def create_schema(
@@ -67,8 +74,7 @@ def execute_query(
         except Exception as e:
             trans.rollback()
             raise DatabaseServiceError("Execute query failed") from e
-
-
+        
 def create_schemas() -> None:
     db_details = load_env(testing=True)
     create_schema(db_details, users_table)

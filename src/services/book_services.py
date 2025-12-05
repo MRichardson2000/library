@@ -1,7 +1,7 @@
 from __future__ import annotations
 from data.classes.book import Book
 from data.database.dbconn import execute_query
-from data.database.models import book_insert
+from data.database.sql_models import book_insert
 from data.dataclasses.db_dataclass import DB
 from src.services.base_services import BaseService
 from src.services.exceptions import (
@@ -109,7 +109,7 @@ class BookServices(BaseService):
                 raise BookNotFoundError("Query returned no results, book not found")
             if len(rows) > 1:
                 raise ValueError("Update aborted due to multiple rows being found")
-            self.book.update_rating(new_rating)
+            self.book.rating = new_rating
             update_query = f"""
                             update book
                             set rating = :rating
