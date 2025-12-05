@@ -9,59 +9,28 @@ class Loan:
         self,
         book: Book,
         user: User,
-        accumulated_late_fee: float = 0.0,
-        loaned: bool = False,
-        loan_time: datetime | None = None,
-        late_fee: bool = False,
-        overdue_return: bool = False,
+        borrow_date: Optional[datetime] = None,
+        duration_days: int = 30,
     ) -> None:
         self.book = book
         self.user = user
-        self.accumulated_late_fee = accumulated_late_fee
-        self.loaned = loaned
-        self.loan_time = loan_time
-        self.late_fee = late_fee
-        self.overdue_return = overdue_return
+        self.borrow_date = borrow_date or datetime.now()
+        self.due_date = self.borrow_date + timedelta(days=duration_days)
+        self.return_date: Optional[datetime] = None
 
-    def borrow_book(self, now: Optional[datetime] = None) -> None:
-        if self.book.title and not self.loaned:
-            self.borrow_time(now)
-            self.loaned = True
+    def return_book(self, now: Optional[datetime] = None) -> None:
+        self.return_date = now or datetime.now()
 
-    def return_book(self, now: Optional[datetime] = None) -> float:
-        if self.book.title and self.loaned:
-            self.loaned = False
-            return self.calculate_late_fee(now)
-        return 0.0
+    def extend_loan(self, extra_days: int) -> None:
+        self.due_date += timedelta(days=extra_days)
 
-    def borrow_time(self, now: Optional[datetime] = None) -> None:
-        self.loan_time = now or datetime.now()
+    @property
+    def is_returned(self) -> bool:
+        return self.return_date is not None
 
-    def calculate_late_fee(self, now: Optional[datetime] = None) -> float:
-        if not self.loan_time:
-            return 0.0
-        now = now or datetime.now()
-        if now > self.get_due_date():
-            self.late_fee = True
-            self.accumulated_late_fee += 2.50
-            return 2.50
-        return 0.0
-
-    def extend_borrow_time(self, now: Optional[datetime] = None) -> None:
-        self.borrow_time(now)
+    @property
+    def is_overdue(self) -> bool:
+        return not self.is_returned and datetime.now() > self.due_date
 
     def get_due_date(self) -> datetime:
-        if not self.loan_time:
-            raise ValueError("No borrow record found.")
-        return self.loan_time + timedelta(days=30)
-
-    def pay_late_fee(self) -> None:
-        if self.late_fee:
-            self.late_fee = False
-            self.accumulated_late_fee -= 2.50
-
-    def get_user(self) -> Optional[tuple[str, str]]:
-        if self.loaned:
-            return self.user.first_name, self.user.last_name
-        else:
-            return None
+        return self.due_date
