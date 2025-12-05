@@ -17,18 +17,6 @@ class LoanServices(BaseService):
     def borrow_book(self) -> None:
         """
         Class method for borrowing a book
-
-        Args:
-            loan (Look): initiliased in the init method:  a loan object. The class object is in data/classes/loan.py
-
-        Returns:
-            None: it just states the book is loaned
-
-        Raises:
-
-
-        Notes:
-
         """
         self.loan.borrow_book()
         current_books_loaned: list[str] = []

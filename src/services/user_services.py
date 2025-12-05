@@ -17,21 +17,11 @@ class UserServices(BaseService):
 
     def create_user(self) -> None:
         """
-        Create a new user record in the database if one does not exist already.
-
-        Args:
-            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
-
-        Returns:
-            None: It just creates the user
+        Create a new user record in the database if one does not already exist.
 
         Raises:
-            UserAlreadyExistsError: If the user already exists
-            DatabaseServiceError: for andy database errors
-            Exception: Anything else
-
-        Notes:
-            This function will check if a user with the details passed in already exists, if a match isn't found it's added into the database.
+            UserAlreadyExistsError: If a user with the same details exists.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
@@ -45,23 +35,14 @@ class UserServices(BaseService):
 
     def get_user_details(self) -> list[dict[str, Any]]:
         """
-        Searches the database to get the details of the user passed in
-
-        Args:
-            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
+        Retrieve details of the current user from the database.
 
         Returns:
-            list[dict[str, Any]]: - a sql row with the user information
+            list[dict[str, Any]]: A list of matching user records.
 
         Raises:
-            UserNotFoundError: If the user is not found in the database
-            DatabaseServiceErrror: If there's an issue outside of our control e.g. a database
-            error
-            Exception: Anything else
-
-        Notes:
-            This function checks if a user exists with the details passed in. If a user
-            is found, the details of that user are returned.
+            UserNotFoundError: If no user is found.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
@@ -75,23 +56,15 @@ class UserServices(BaseService):
 
     def change_surname(self, new_surname: str) -> None:
         """
-        Changes the users surname in the database
+        Update the surname of the current user in the database.
 
         Args:
-            new_surname: the persons new surname
-
-        Returns:
-            None: just updates the surname
+            new_surname (str): The new surname value.
 
         Raises:
-            UserNotFoundError: If no users are found
-            ValueError: If multiple rows are found to prevent duplicate columns being modified.
-            Exception: Anything else
-            DatabaseServiceError: To handle if there's an error with the database connection
-            that's outside of our control
-
-        Notes:
-            Updates the users surname in the database
+            UserNotFoundError: If no user is found.
+            ValueError: If multiple matches exist.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
@@ -115,23 +88,15 @@ class UserServices(BaseService):
 
     def email_change(self, new_email_address: str) -> None:
         """
-        Changes the users email address in the database
+        Update the email address of the current user in the database.
 
         Args:
-            new_email_address: the persons new email address
-
-        Returns:
-            None: just updates the email address
+            new_email_address (str): The new email address.
 
         Raises:
-            UserNotFoundError: If no users are found
-            ValueError: If multiple rows are found to prevent duplicate columns being modified.
-            Exception: Anything else
-            DatabaseServiceError: To handle if there's an error with the database connection
-            that's outside of our control
-
-        Notes:
-            Updates the users email address in the database
+            UserNotFoundError: If no user is found.
+            ValueError: If multiple matches exist.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
@@ -155,23 +120,15 @@ class UserServices(BaseService):
 
     def phone_number_change(self, new_phone_number: int) -> None:
         """
-        Changes the users phone number in the database
+        Update the phone number of the current user in the database.
 
         Args:
-            new_phone_number: the persons new number
-
-        Returns:
-            None: just updates the number
+            new_phone_number (str): The new phone number.
 
         Raises:
-            UserNotFoundError: If no users are found
-            ValueError: If multiple rows are found to prevent duplicate columns being modified.
-            Exception: Anything else
-            DatabaseServiceError: To handle if there's an error with the database connection
-            that's outside of our control
-
-        Notes:
-            Updates the users phone number in the database
+            UserNotFoundError: If no user is found.
+            ValueError: If multiple matches exist.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
@@ -197,26 +154,12 @@ class UserServices(BaseService):
 
     def delete_user(self) -> None:
         """
-        This functions updates the deleted column in the database to True. The user is
-        still in the system for audit purposes they are just marked as deleted.
-
-        Args:
-            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
-
-        Returns:
-            None: It just updates the deleted column in the database
+        Mark the current user as deleted for audit purposes.
 
         Raises:
-            UserNotFoundError: If the user doesn't exist in the database
-            DatabaseServiceError: Database errors outside of our control
-            Exception: Anything else
-
-        Notes:
-            We check if the users there, if they are we check and make sure only 1 row is pulled from the database, if multiple rows are pulled the deletion
-            aborts as only 1 should be visible. then we update the deleted field to true for that user.
-
+            UserNotFoundError: If the user is not found.
+            DatabaseServiceError: If a database operation fails.
         """
-
         conditions, values = self.build_conditions(self.user.filters())
         verification_query = f"select * from users where {conditions}"
         try:
@@ -234,26 +177,16 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to delete user") from e
 
-    def check_borrow_eligibility(self) -> bool:
+    def can_borrow_book(self) -> bool:
         """
-        Checks if someone is eligible to borrow a book. The current loan limit is 5 books but this can be modified
-
-        Args:
-            user (User): Initialised in the init method:  a User object - the class object is in data - classes - user.py
+        Check if the current user is eligible to borrow a book.
 
         Returns:
-            bool: Either true or false if they already have 5 loaned books
+            bool: True if the user has fewer than 5 books on loan, otherwise False.
 
         Raises:
-            UserNotFoundError: if no user is found in the database
-            DatabaseServiceError: If there's an issue outside of our control involving the database
-            Exception: Anything else
-
-        Notes:
-            We find the users and then look for the books loaned column. If the value is
-            greater than 5 then they're at max capacity and need to return a book before
-            they can loan another. The max is 5.
-
+            UserNotFoundError: If no user is found.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
@@ -267,32 +200,16 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve borrow eligibility") from e
 
-    def calculate_outstanding_late_fees(self) -> float:
+    def get_outstanding_late_fees(self) -> float:
         """
-        Calculate the total outstanding late fees for a given user.
-
-        This method builds a SQL query based on the filters provided by the
-        User object, retrieves the accumulated late fees from the loan
-        tables accumulated fees column, and returns the total amount owed.
-
-        Args:
-            user (User): Initialised in the init method:  A User object defined in data/classes/user.py
-                that provides filter criteria through its filters() method.
+        Calculate the total outstanding late fees for the current user.
 
         Returns:
-            float: The total outstanding late fee for the user.
+            float: The total late fees owed.
 
         Raises:
-            DatabaseServiceError: if there's an issue outside of our control with the database connection.
-            ValueError: If the user is not found
-            Exception: Propagates any exceptions raised during query execution.
-
-        Notes:
-            The query joins the users table with the loan table on
-            user_id.
-            Filters are dynamically applied to the WHERE clause based on
-            non-null values returned by self.user.filters().
-            The query then shows the outstanding late fees
+            ValueError: If the user is not found.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         query = f"""
@@ -316,29 +233,15 @@ class UserServices(BaseService):
                 "Failed to retrieve outstanding late fees"
             ) from e
 
-    def list_overdue_users(self) -> list[dict[str, Any]]:
+    def get_overdue_users(self) -> list[dict[str, Any]]:
         """
-        Retrieves all users from the database that have overdue books that
-        need returning.
-
-        Args:
-            No args here, just a query to pull data out that lists users who
-            late books that need handing in.
+        Retrieve all users with overdue books.
 
         Returns:
-            list[dict[str, Any]]: returns with details if any are present.
-            Otherwise it returns an empty list of dicts that states no
-            values were found.
+            list[dict[str, Any]]: A list of users with overdue loans.
 
         Raises:
-            Exception: Anything else
-            DatabaseServiceError: To handle if there's an error with the database connection
-            that's outside of our control
-
-        Notes:
-            Simple yet effective query to list the users that have overdue_returns
-            resulting in late fees due to be paid.
-
+            DatabaseServiceError: If a database operation fails.
         """
         try:
             overdue = execute_query(
@@ -359,27 +262,17 @@ class UserServices(BaseService):
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve overdue users") from e
 
-    def see_books_on_loan(self) -> list[dict[str, Any]]:
+    def get_books_on_loan(self) -> list[dict[str, Any]]:
         """
-        Retrieves all books on loan from the database for the user passed in.
-
-        Args:
-            No args here, just a query to pull data out that lists the books
-            that are loaned by a certain user.
+        Retrieve all books currently on loan for the user.
 
         Returns:
-            list[dict[str, Any]]: returns with details if any are present.
-            Otherwise it returns an empty list.
+            list[dict[str, Any]]: A list of loaned books.
 
         Raises:
-            UserNotFoundError: If no users are found
-            ValueError: If no books on loan are found
-            Exception: Anything else
-            DatabaseServiceError: To handle if there's an error with the database connection
-            that's outside of our control
-
-        Notes:
-            Simple yet effective query to list the books the user has on loan.
+            UserNotFoundError: If no user is found.
+            ValueError: If no books on loan are found.
+            DatabaseServiceError: If a database operation fails.
         """
         conditions, values = self.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"

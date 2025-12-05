@@ -1,5 +1,5 @@
 import pytest
-from data.dbconn import load_env
+from data.database.dbconn import load_env
 from data.dataclasses.db_dataclass import DB
 
 
