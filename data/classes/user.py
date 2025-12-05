@@ -1,5 +1,5 @@
 from data.classes.book import Book
-from typing import Any, Optional
+from typing import Optional
 
 
 class User:
@@ -22,13 +22,6 @@ class User:
     def __repr__(self) -> str:
         return f"User: {self.first_name} {self.last_name}, {len(self.books_loaned)} books loaned."
 
-    def filters(self) -> dict[str, Any]:
-        return {
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "email_address": self.email_address,
-        }
-
     @property
     def user_id(self) -> Optional[int]:
         return self._user_id
@@ -39,7 +32,7 @@ class User:
 
     @email_address.setter
     def email_address(self, new_email: str) -> None:
-        if not "@" in new_email:
+        if "@" not in new_email:
             raise ValueError("Email address must contain the @ symbol")
         self._email_address = new_email
 

@@ -1,4 +1,4 @@
-from typing import Union, Any, Optional
+from typing import Union, Optional
 
 
 class Book:
@@ -20,21 +20,6 @@ class Book:
 
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."
-
-    def filters(
-        self, include_id: bool = False, include_deleted: bool = False
-    ) -> dict[str, Any]:
-        data: dict[str, Any] = {
-            "title": self.title,
-            "author": self.author,
-            "genre": self.genre,
-            "rating": self.rating,
-        }
-        if include_id:
-            data["book_id"] = self._book_id
-        if include_deleted:
-            data["deleted"] = self.deleted
-        return data
 
     @property
     def book_id(self) -> Optional[int]:

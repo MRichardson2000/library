@@ -33,26 +33,29 @@ class UserServices:
             raise DatabaseServiceError("Failed to create user") from e
         return new_user
 
-    def get_user_details(self) -> list[dict[str, Any]]:
-        """
-        Retrieve details of the current user from the database.
+    # def get_user_details(
+    #         self,
+    #         params: str
+    # ) -> list[dict[str, Any]]:
+    #     """
+    #     Retrieve details of the current user from the database.
 
-        Returns:
-            list[dict[str, Any]]: A list of matching user records.
+    #     Returns:
+    #         list[dict[str, Any]]: A list of matching user records.
 
-        Raises:
-            UserNotFoundError: If no user is found.
-            DatabaseServiceError: If a database operation fails.
-        """
-        rows = self.repository.find_by_filters(self.user.filters())
-        query = f"select * from users where {conditions}"
-        try:
-            get_user = execute_query(query, values)
-            if not get_user:
-                raise UserNotFoundError("User not found in the database")
-            return get_user
-        except Exception as e:
-            raise DatabaseServiceError("Failed to retrieve user details") from e
+    #     Raises:
+    #         UserNotFoundError: If no user is found.
+    #         DatabaseServiceError: If a database operation fails.
+    #     """
+    #     rows = self.repository.find_by_filters(self.user.filters())
+    #     query = f"select * from users where {conditions}"
+    #     try:
+    #         get_user = execute_query(query, values)
+    #         if not get_user:
+    #             raise UserNotFoundError("User not found in the database")
+    #         return get_user
+    #     except Exception as e:
+    #         raise DatabaseServiceError("Failed to retrieve user details") from e
 
     def change_surname(self, new_surname: str) -> None:
         """
