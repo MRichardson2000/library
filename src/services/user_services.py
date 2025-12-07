@@ -178,26 +178,3 @@ class UserServices:
             execute_query(delete_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to delete user") from e
-
-    def can_borrow_book(self) -> bool:
-        """
-        Check if the current user is eligible to borrow a book.
-
-        Returns:
-            bool: True if the user has fewer than 5 books on loan, otherwise False.
-
-        Raises:
-            UserNotFoundError: If no user is found.
-            DatabaseServiceError: If a database operation fails.
-        """
-        conditions, values = BaseService.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
-        try:
-            get_user = execute_query(query, values)
-            if not get_user:
-                raise UserNotFoundError("User not found in the database")
-            if get_user[0].get("books_loaned", 0) > 5:
-                return False
-            return True
-        except Exception as e:
-            raise DatabaseServiceError("Failed to retrieve borrow eligibility") from e
