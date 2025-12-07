@@ -1,13 +1,27 @@
-from data.classes.loan import Loan
 from data.classes.user import User
-from tests.book_tests.test_add_book import test_add_book
-from datetime import datetime
+from data.database.dbconn import execute_query
+from data.dataclasses.db_dataclass import DB
+from tests.auto_clear_db import auto_clear_user_table
+from src.services.user_services import UserServices
 
 
-def test_get_user() -> None:
-    book = test_add_book()
-    user = User(1, "user", "user", "user@user.user.user", 73849043912)
-    loan = Loan(book, user)
-    loan.borrow_book(now=datetime.now())
-    get_user = loan.get_user()
-    assert get_user == (user.first_name, user.last_name)
+def test_get_user(db_session: DB) -> None:
+    auto_clear_user_table()
+    user = User(
+        None,
+        first_name="user",
+        last_name="user",
+        email_address="user@user.user.user",
+        phone_number="07384904391",
+    )
+    service = UserServices(user, db_session)
+    service.create_user()
+    output = execute_query(
+        "select * from users where first_name = 'user'", db_details=db_session
+    )
+    assert output is not None
+    assert output[0]["first_name"] == "user"
+    assert output[0]["last_name"] == "user"
+    assert output[0]["email_address"] == "user@user.user.user"
+    assert output[0]["phone_number"] == "07384904391"
+    auto_clear_user_table()

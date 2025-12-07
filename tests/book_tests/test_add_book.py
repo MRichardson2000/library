@@ -1,13 +1,13 @@
 from __future__ import annotations
-from data.database.dbconn import execute_query, load_env
+from data.database.dbconn import execute_query
 from data.dataclasses.db_dataclass import DB
 from data.classes.book import Book
 from src.services.book_services import BookServices
-from tests.auto_clear_db import auto_clear_db
+from tests.auto_clear_db import auto_clear_book_table
 
 
-def test_add_book(db: DB = load_env(testing=True)) -> None:
-    auto_clear_db()
+def test_add_book(db_session: DB) -> None:
+    auto_clear_book_table()
     book = Book(
         None,
         title="test",
@@ -15,9 +15,11 @@ def test_add_book(db: DB = load_env(testing=True)) -> None:
         genre="test",
         rating=3,
     )
-    service = BookServices(book, db)
+    service = BookServices(book, db_session)
     service.create_book()
-    output = execute_query("select * from book where title = 'test'", db_details=db)
+    output = execute_query(
+        "select * from book where title = 'test'", db_details=db_session
+    )
     assert output is not None
     assert isinstance(output, list)  # type: ignore
     assert len(output) == 1
@@ -26,4 +28,4 @@ def test_add_book(db: DB = load_env(testing=True)) -> None:
     assert row["author"] == book.author
     assert row["genre"] == book.genre
     assert row["rating"] == book.rating
-    execute_query("delete from book where unique_id = 1", db_details=db)
+    auto_clear_book_table()
