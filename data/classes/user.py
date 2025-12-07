@@ -5,26 +5,22 @@ from typing import Optional, Any
 class User:
     def __init__(
         self,
-        user_id: Optional[int],
         first_name: str,
         last_name: str,
         email_address: str,
         phone_number: str,
         books_loaned: list[Book] | None = None,
+        user_id: Optional[int] = None,
     ) -> None:
-        self._user_id = user_id
         self.first_name = first_name
         self.last_name = last_name
         self._email_address = email_address
         self._phone_number = phone_number
         self._books_loaned = books_loaned if books_loaned is not None else []
+        self.user_id = user_id
 
     def __repr__(self) -> str:
         return f"User(id={self.user_id}, name={self.first_name} {self.last_name}, loans={len(self.books_loaned)})"
-
-    @property
-    def user_id(self) -> Optional[int]:
-        return self._user_id
 
     @property
     def email_address(self) -> str:

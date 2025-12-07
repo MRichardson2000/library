@@ -9,7 +9,8 @@ from data.database.sql_models import (
 from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, RowMapping
+from sqlalchemy.exc import ResourceClosedError
 import logging
 from typing import Optional, Any, Union, Sequence
 
@@ -58,7 +59,7 @@ def execute_query(
     query: str,
     params: Optional[Union[Sequence[Any], dict[str, Any]]] = None,
     db_details: Optional[DB] = None,
-) -> Optional[list[dict[str, Any]]]:
+) -> list[dict[str, Any]]:
     if db_details is None:
         db_details = load_env()
     engine: Engine = get_engine(db_details)
@@ -66,17 +67,20 @@ def execute_query(
         trans = conn.begin()
         try:
             result = conn.execute(sa.text(query), params or {})
-            if query.strip().lower().startswith("select"):
+            rows: Sequence[RowMapping] = []
+            try:
                 rows = result.mappings().all()
-                return [dict(r) for r in rows]
+            except ResourceClosedError:
+                rows = []
             trans.commit()
+            return [dict(r) for r in rows]
         except Exception as e:
             trans.rollback()
             raise DatabaseServiceError("Execute query failed") from e
 
 
 def create_schemas() -> None:
-    db_details = load_env(testing=True)
+    db_details = load_env()
     create_schema(db_details, users_table)
     create_schema(db_details, book_table)
     create_schema(db_details, loan_table)

@@ -32,7 +32,10 @@ class BookServices(BaseService):
             book_check = execute_query(query, values, self.db)
             if book_check:
                 raise BookAlreadyExistsError("Book already exists")
-            execute_query(book_insert, values, self.db)
+            rows = execute_query(book_insert, values, self.db)
+            if not rows or "book_id" not in rows[0]:
+                raise DatabaseServiceError("Insert did not return a book_id")
+            self.book.book_id = rows[0]["book_id"]
         except Exception as e:
             raise DatabaseServiceError("Failed to create book") from e
 
@@ -102,10 +105,10 @@ class BookServices(BaseService):
             ValueError: If no results are found or multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.book.filters())
+        conditions, values = BaseService.build_conditions(self.book.id_filter())
         find_book = f"select * from book where {conditions}"
         try:
-            rows = execute_query(find_book, values)
+            rows = execute_query(find_book, values, self.db)
             if not rows:
                 raise BookNotFoundError("Query returned no results, book not found")
             if len(rows) > 1:
@@ -117,6 +120,6 @@ class BookServices(BaseService):
                             where {conditions}
                             """
             values["rating"] = new_rating
-            execute_query(update_query, values)
+            execute_query(update_query, values, self.db)
         except Exception as e:
             raise DatabaseServiceError("Failed to update book rating") from e

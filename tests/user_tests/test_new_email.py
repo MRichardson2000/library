@@ -8,7 +8,6 @@ from src.services.user_services import UserServices
 def test_new_email(db_session: DB) -> None:
     auto_clear_user_table()
     user = User(
-        None,
         first_name="user",
         last_name="user",
         email_address="user@user.user.user",
@@ -25,7 +24,7 @@ def test_new_email(db_session: DB) -> None:
         "select * from users where first_name = 'user'", db_details=db_session
     )
     assert output_after is not None
-    assert output_after[0]["email_address"] == "user@user.user.user"
+    assert output_after[0]["email_address"] == "user1@user.user.user"
     assert user.email_address == "user1@user.user.user"
     assert output_before[0]["email_address"] != output_after[0]["email_address"]
     auto_clear_user_table()

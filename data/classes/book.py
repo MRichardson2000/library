@@ -29,6 +29,10 @@ class Book:
     def book_id(self) -> Optional[int]:
         return self._book_id
 
+    @book_id.setter
+    def book_id(self, value: int) -> None:
+        self._book_id = value
+
     @property
     def title(self) -> str:
         return self._title
@@ -72,3 +76,6 @@ class Book:
             "genre": self._genre,
             "rating": self.rating,
         }
+
+    def id_filter(self) -> dict[str, Any]:
+        return {"book_id": self.book_id}

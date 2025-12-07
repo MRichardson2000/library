@@ -8,7 +8,6 @@ from src.services.user_services import UserServices
 def test_get_user(db_session: DB) -> None:
     auto_clear_user_table()
     user = User(
-        None,
         first_name="user",
         last_name="user",
         email_address="user@user.user.user",

@@ -100,23 +100,30 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = BaseService.build_conditions(
+            {"user_id": self.user.user_id}
+        )
         find_user_query = f"select * from users where {conditions}"
-        self.user.email_address = new_email_address
         try:
-            rows = execute_query(find_user_query, values)
-            if not rows:
+            user_check = execute_query(find_user_query, values)
+            if not user_check:
                 raise UserNotFoundError("Unable to find user, email change aborted")
-            if len(rows) > 1:
+            if len(user_check) > 1:
                 raise ValueError(
                     "Modification aborted due to multiple rows being detected"
                 )
             update_query = f"""
-                            update user
-                            set email_address = {self.user.email_address}
+                            update users
+                            set email_address = :new_email
                             where {conditions}
+                            returning user_id;
                             """
-            execute_query(update_query)
+            values["new_email"] = new_email_address
+            rows = execute_query(update_query, values, self.db)
+            if not rows or "user_id" not in rows[0]:
+                raise DatabaseServiceError("Modification did not find a user_id")
+            self.user.user_id = rows[0]["user_id"]
+            self.user.email_address = new_email_address
         except Exception as e:
             raise DatabaseServiceError("Failed to change email address") from e
 

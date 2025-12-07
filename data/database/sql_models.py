@@ -1,7 +1,6 @@
 users_table = """
     create table if not exists users (
-        unique_id bigserial primary key,
-        user_id int not null unique,
+        user_id bigserial primary key,
         first_name text not null,
         last_name text not null,
         email_address text not null,
@@ -12,20 +11,17 @@ users_table = """
 
 users_insert = """
     insert into users (
-        user_id,
         first_name,
         last_name,
         email_address,
-        phone_number,
-        deleted
+        phone_number
     ) values (
-        :user_id,
         :first_name,
         :last_name,
         :email_address,
-        :phone_number,
-        :deleted
-    );
+        :phone_number
+    )
+    returning user_id;
 """
 
 book_table = """
@@ -51,7 +47,8 @@ book_insert = """
         :author,
         :genre,
         :rating
-    );
+    )
+    returning book_id;
 """
 
 loan_table = """
