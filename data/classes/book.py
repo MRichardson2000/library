@@ -1,4 +1,4 @@
-from typing import Union, Optional
+from typing import Union, Optional, Any
 
 
 class Book:
@@ -11,10 +11,14 @@ class Book:
         rating: Union[int, float],
         deleted: bool = False,
     ) -> None:
+        if not isinstance(rating, (int, float)):  # type: ignore
+            raise TypeError(f"Rating must be int or float, not {type(rating).__name__}")
+        if not (1 <= rating <= 5):
+            raise ValueError("The rating needs to be between 1 and 5.")
         self._book_id = book_id
-        self.title = title
-        self.author = author
-        self.genre = genre
+        self._title = title
+        self._author = author
+        self._genre = genre
         self._rating = rating
         self.deleted = deleted
 
@@ -26,6 +30,22 @@ class Book:
         return self._book_id
 
     @property
+    def title(self) -> str:
+        return self._title
+
+    @property
+    def author(self) -> str:
+        return self._author
+
+    @property
+    def genre(self) -> str:
+        return self._genre
+
+    @genre.setter
+    def genre(self, new_genre: str) -> None:
+        self._genre = new_genre
+
+    @property
     def rating(self) -> Union[int, float]:
         return self._rating
 
@@ -35,7 +55,20 @@ class Book:
             raise TypeError(
                 f"Rating must be int or float, not {type(new_rating).__name__}"
             )
-        if 1 <= new_rating <= 5:
-            self._rating = new_rating
-        else:
+        if not (1 <= new_rating <= 5):
             raise ValueError("The rating needs to be between 1 and 5.")
+        self._rating = new_rating
+
+    def mark_deleted(self) -> None:
+        self.deleted = True
+
+    def restore(self) -> None:
+        self.deleted = False
+
+    def filters(self) -> dict[str, Any]:
+        return {
+            "title": self._title,
+            "author": self._author,
+            "genre": self._genre,
+            "rating": self.rating,
+        }

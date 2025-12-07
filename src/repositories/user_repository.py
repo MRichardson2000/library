@@ -1,36 +1,24 @@
-from sqlalchemy.orm import Session
-from data.database.orm_models import UserORM
-from src.services.exceptions import DatabaseServiceError, UserAlreadyExistsError
+from src.services.exceptions import DatabaseServiceError
+from src.services.base_services import BaseService
+from data.database.sql_models import users_insert
+from data.dataclasses.db_dataclass import DB
+from data.classes.user import User
+from data.database.dbconn import execute_query
 from typing import Any
 
 
 class UserRepository:
-    def __init__(self, session: Session) -> None:
-        self.session = session
+    def __init__(self, db_details: DB) -> None:
+        self.db_details = db_details
 
-    def find_by_email(self, email_address: str) -> UserORM | None:
-        return (
-            self.session.query(UserORM)
-            .filter(UserORM.email_address == email_address)
-            .one_or_none()
-        )
+    def find_by_filters(self, filters: dict[str, Any]) -> list[dict[str, Any]]:
+        conditions, params = BaseService.build_conditions(filters)
+        query = f"select * from users where {conditions} and deleted = false"
+        result = execute_query(query, params, self.db_details) or []
+        return result
 
-    def find_by_filters(self, filters: dict[str, Any]) -> list[UserORM]:
-        filters = {k: v for k, v in filters.items() if v is not None}
-        query = self.session.query(UserORM)
-        for field, value in filters.items():
-            if hasattr(UserORM, field):
-                query = query.filter(getattr(UserORM, field) == value)
-        return query.all()
-
-    def insert(self, user: UserORM) -> None:
+    def insert(self, user: User) -> None:
         try:
-            self.session.add(user)
-            self.session.commit()
+            execute_query(users_insert, user.filters(), self.db_details)
         except Exception as e:
-            self.session.rollback()
             raise DatabaseServiceError("Failed to insert user") from e
-
-    def assert_not_exists_by_email(self, email_address: str) -> None:
-        if self.find_by_email(email_address):
-            raise UserAlreadyExistsError("User already exists")

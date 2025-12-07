@@ -10,14 +10,14 @@ from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker, Session
+import logging
 from typing import Optional, Any, Union, Sequence
 
 
 def load_env(testing: bool = False) -> DB:
     dotenv_path = ".env.test" if testing else ".env"
     load_dotenv(dotenv_path=dotenv_path, override=True)
-    print("Loaded DB Name:", os.getenv("DB_NAME"))
+    logging.info("Loaded DB Name: %s", os.getenv("DB_NAME"))
     if testing and os.getenv("DB_NAME") == "library":
         raise RuntimeError(
             "Test mode is using the prod DB - Check your .env.test file!"
@@ -38,11 +38,6 @@ def get_engine(db_details: DB) -> sa.Engine:
         f"@{db_details.db_host}:{db_details.db_port}/{db_details.db_name}"
     )
     return sa.create_engine(url, echo=False, future=True)
-
-
-def get_session(engine: sa.Engine) -> sessionmaker[Session]:
-    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-    return SessionLocal
 
 
 def create_schema(

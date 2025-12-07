@@ -1,14 +1,26 @@
-from typing import Optional
+from data.classes.book import Book
+from typing import Any
 
 
 class Inventory:
-    def __init__(self, book_id: Optional[int], quantity: int) -> None:
-        self._book_id = book_id
+    def __init__(self, book: Book, quantity: int, restock_threshold: int = 2) -> None:
+        if not isinstance(quantity, int):  # type: ignore
+            raise TypeError("Quantity must be an integer")
+        if quantity < 0:
+            raise ValueError("Quantity cannot be negative")
+        self.book = book
         self._quantity = quantity
+        self._restock_threshold = restock_threshold
 
-    @property
-    def book_id(self) -> Optional[int]:
-        return self._book_id
+    def __repr__(self) -> str:
+        return f"Inventory (book={self.book.title}, quantity={self.quantity})"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "book_id": self.book.book_id,
+            "title": self.book.title,
+            "quantity": self.quantity,
+        }
 
     @property
     def quantity(self) -> int:
@@ -39,4 +51,4 @@ class Inventory:
         return self._quantity > 0
 
     def needs_restock(self) -> bool:
-        return self._quantity < 2
+        return self._quantity < self._restock_threshold

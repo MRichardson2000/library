@@ -1,8 +1,8 @@
 from __future__ import annotations
 from data.database.dbconn import execute_query
+from data.dataclasses.db_dataclass import DB
 from data.database.sql_models import users_insert
-from data.database.orm_models import UserORM
-from src.repositories.user_repository import UserRepository
+from data.classes.user import User
 from src.services.base_services import BaseService
 from src.services.exceptions import (
     UserAlreadyExistsError,
@@ -13,49 +13,48 @@ from typing import Any
 
 
 class UserServices:
-    def __init__(self, repository: UserRepository) -> None:
-        self.repository = repository
+    def __init__(self, user: User, db: DB) -> None:
+        self.user = user
+        self.db = db
 
-    def create_user(
-        self, first_name: str, last_name: str, email_address: str, phone_number: int
-    ) -> UserORM:
-        self.repository.assert_not_exists_by_email(email_address)
+    def create_user(self) -> None:
+        """
+        Create user in the database if they don't already exist
 
-        new_user = UserORM(
-            first_name=first_name,
-            last_name=last_name,
-            email_address=email_address,
-            phone_number=phone_number,
-        )
+        Raises:
+            UserAlreadyExistsError: If user is found.
+            DatabaseServiceError: If a database operation fails.
+        """
+        conditions, values = BaseService.build_conditions(self.user.filters())
+        query = f"select * from users where {conditions}"
         try:
-            self.repository.insert(new_user)
+            user_check = execute_query(query, values, self.db)
+            if user_check:
+                raise UserAlreadyExistsError("User already exists")
+            execute_query(users_insert, values, self.db)
         except Exception as e:
             raise DatabaseServiceError("Failed to create user") from e
-        return new_user
 
-    # def get_user_details(
-    #         self,
-    #         params: str
-    # ) -> list[dict[str, Any]]:
-    #     """
-    #     Retrieve details of the current user from the database.
+    def get_user_details(self) -> list[dict[str, Any]]:
+        """
+        Retrieve details of the current user from the database if they exist.
 
-    #     Returns:
-    #         list[dict[str, Any]]: A list of matching user records.
+        Returns:
+            list[dict[str, Any]]: A list of matching user records.
 
-    #     Raises:
-    #         UserNotFoundError: If no user is found.
-    #         DatabaseServiceError: If a database operation fails.
-    #     """
-    #     rows = self.repository.find_by_filters(self.user.filters())
-    #     query = f"select * from users where {conditions}"
-    #     try:
-    #         get_user = execute_query(query, values)
-    #         if not get_user:
-    #             raise UserNotFoundError("User not found in the database")
-    #         return get_user
-    #     except Exception as e:
-    #         raise DatabaseServiceError("Failed to retrieve user details") from e
+        Raises:
+            UserNotFoundError: If no user is found.
+            DatabaseServiceError: If a database operation fails.
+        """
+        conditions, values = BaseService.build_conditions(self.user.filters())
+        query = f"select * from users where {conditions}"
+        try:
+            get_user = execute_query(query, values)
+            if not get_user:
+                raise UserNotFoundError("User not found in the database")
+            return get_user
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve user details") from e
 
     def change_surname(self, new_surname: str) -> None:
         """
@@ -69,7 +68,7 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        rows = self.repository.find_by_filters(self.user.filters())
+        conditions, values = BaseService.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.last_name = new_surname
         try:
@@ -101,7 +100,7 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        rows = self.repository.find_by_filters(self.user.filters())
+        conditions, values = BaseService.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.email_address = new_email_address
         try:
@@ -121,7 +120,7 @@ class UserServices:
         except Exception as e:
             raise DatabaseServiceError("Failed to change email address") from e
 
-    def phone_number_change(self, new_phone_number: int) -> None:
+    def phone_number_change(self, new_phone_number: str) -> None:
         """
         Update the phone number of the current user in the database.
 
@@ -133,7 +132,7 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        rows = self.repository.find_by_filters(self.user.filters())
+        conditions, values = BaseService.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.phone_number = new_phone_number
         try:
@@ -163,7 +162,7 @@ class UserServices:
             UserNotFoundError: If the user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        rows = self.repository.find_by_filters(self.user.filters())
+        conditions, values = BaseService.build_conditions(self.user.filters())
         verification_query = f"select * from users where {conditions}"
         try:
             rows = execute_query(verification_query, values)
@@ -191,7 +190,7 @@ class UserServices:
             UserNotFoundError: If no user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        rows = self.repository.find_by_filters(self.user.filters())
+        conditions, values = BaseService.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
             get_user = execute_query(query, values)
@@ -202,95 +201,3 @@ class UserServices:
             return True
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve borrow eligibility") from e
-
-    def get_outstanding_late_fees(self) -> float:
-        """
-        Calculate the total outstanding late fees for the current user.
-
-        Returns:
-            float: The total late fees owed.
-
-        Raises:
-            ValueError: If the user is not found.
-            DatabaseServiceError: If a database operation fails.
-        """
-        rows = self.repository.find_by_filters(self.user.filters())
-        query = f"""
-                select u.user_id, 
-                u.first_name, 
-                u.last_name,
-                l.accumulated_late_fee 
-                from users u
-                left join loan l on u.user_id = l.user_id
-                where {conditions}
-                group by u.user_id, u.first_name, u.last_name
-                """
-        try:
-            late_fee = execute_query(query, values)
-            if not late_fee:
-                raise ValueError("At least one filter must be passed in")
-            total_fee = late_fee[0].get("l.accumulated_late_fee", 0)
-            return total_fee
-        except Exception as e:
-            raise DatabaseServiceError(
-                "Failed to retrieve outstanding late fees"
-            ) from e
-
-    def get_overdue_users(self) -> list[dict[str, Any]]:
-        """
-        Retrieve all users with overdue books.
-
-        Returns:
-            list[dict[str, Any]]: A list of users with overdue loans.
-
-        Raises:
-            DatabaseServiceError: If a database operation fails.
-        """
-        try:
-            overdue = execute_query(
-                """
-                select u.first_name,
-                       u.last_name,
-                       u.email_address,
-                       u.phone_number
-                from users u
-                left join loan l on l.user_id=u.user_id
-                having l.overdue_return = True
-                """
-            )
-            if overdue:
-                return overdue
-            else:
-                return [{"no_overdue": "users_found"}]
-        except Exception as e:
-            raise DatabaseServiceError("Failed to retrieve overdue users") from e
-
-    def get_books_on_loan(self) -> list[dict[str, Any]]:
-        """
-        Retrieve all books currently on loan for the user.
-
-        Returns:
-            list[dict[str, Any]]: A list of loaned books.
-
-        Raises:
-            UserNotFoundError: If no user is found.
-            ValueError: If no books on loan are found.
-            DatabaseServiceError: If a database operation fails.
-        """
-        rows = self.repository.find_by_filters(self.user.filters())
-        find_user_query = f"select * from users where {conditions}"
-        try:
-            if not find_user_query:
-                raise UserNotFoundError(
-                    "Unable to find user, therefore unable to find books on loan"
-                )
-            find_books_query = f"select books_loaned from users where {conditions}"
-            if not find_books_query:
-                raise ValueError(
-                    f"{self.user.first_name} {self.user.last_name} does not have any books on loan"
-                )
-            return execute_query(find_books_query, values) or []
-        except Exception as e:
-            raise DatabaseServiceError(
-                f"Unable to see books on loan for {self.user.first_name} {self.user.last_name}"
-            ) from e
