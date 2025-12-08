@@ -23,8 +23,14 @@ class DefaultFilterBuilder(FilterBuilder):
 
 
 class QueryExecutor(ABC):
-    def __init__(self, db_session: DB) -> None:
+    def __init__(self, db_session: DB, filter_builder: FilterBuilder) -> None:
+        self._filter_builder = filter_builder
         self._db_session = db_session
+
+    @property
+    @abstractmethod
+    def table_name(self) -> str:
+        pass
 
     @property
     def db_session(self) -> DB:
@@ -34,3 +40,35 @@ class QueryExecutor(ABC):
         self, query: str, values: dict[str, Any] | None = None
     ) -> list[dict[str, Any]] | None:
         return execute_query(query, values, db_details=self.db_session)
+
+    def find_by_filters(self, filters: dict[str, Any]) -> list[dict[str, Any]] | None:
+        conditions, values = self._filter_builder.build_conditions(filters)
+        query = f"select * from {self.table_name} where {conditions}"
+        return self.execute(query, values)
+
+
+class UserQueryExecutor(QueryExecutor):
+    def __init__(self, db_session: DB) -> None:
+        super().__init__(db_session, DefaultFilterBuilder(db_session))
+
+    @property
+    def table_name(self) -> str:
+        return "users"
+
+
+class BookQueryExecutor(QueryExecutor):
+    def __init__(self, db_session: DB) -> None:
+        super().__init__(db_session, DefaultFilterBuilder(db_session))
+
+    @property
+    def table_name(self) -> str:
+        return "book"
+
+
+class LoanQueryExecutor(QueryExecutor):
+    def __init__(self, db_session: DB) -> None:
+        super().__init__(db_session, DefaultFilterBuilder(db_session))
+
+    @property
+    def table_name(self) -> str:
+        return "loan"

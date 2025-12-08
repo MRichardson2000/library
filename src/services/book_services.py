@@ -1,23 +1,24 @@
 from __future__ import annotations
 from data.classes.book import Book
 from data.database.sql_models import book_insert
-from data.dataclasses.db_dataclass import DB
 from data.classes.book import Book
-from src.services.base_services import DefaultFilterBuilder, QueryExecutor
+from src.services.base_services import BookQueryExecutor, FilterBuilder
 from src.services.exceptions import (
     BookAlreadyExistsError,
     DatabaseServiceError,
     BookNotFoundError,
 )
+import logging
 from typing import Any
 
 
 class BookServices:
-    def __init__(self, book: Book, db: DB) -> None:
-        self.filters = DefaultFilterBuilder(db)
-        self.executor = QueryExecutor(db)
+    def __init__(
+        self, book: Book, executor: BookQueryExecutor, filters: FilterBuilder
+    ) -> None:
         self.book = book
-        self.db = db
+        self.executor = executor
+        self.filters = filters
 
     def create_book(self) -> None:
         """
@@ -27,18 +28,32 @@ class BookServices:
             BookAlreadyExistsError: If a book with the same details exists.
             DatabaseServiceError: If a database operation fails.
         """
+        logging.info("Attempting to create book: %s", self.book.title)
         conditions, values = self.filters.build_conditions(self.book.filters())
         query = f"select * from book where {conditions}"
         try:
             book_check = self.executor.execute(query, values)
             if book_check:
+                logging.warning("Book Already exists: %s", self.book.title)
                 raise BookAlreadyExistsError("Book already exists")
             rows = self.executor.execute(book_insert, values)
             if not rows or "book_id" not in rows[0]:
+                logging.error("Insert failed for book: %s", self.book.title)
                 raise DatabaseServiceError("Insert did not return a book_id")
             self.book.book_id = rows[0]["book_id"]
-        except Exception as e:
-            raise DatabaseServiceError("Failed to create book") from e
+            logging.info("Book created successfully with ID %s", self.book.book_id)
+        except Exception:
+            logging.exception("Failed to create book")
+            raise
+
+        """
+        example use case
+
+        db = DB("user", "pass", "host", "5432", "library")
+        executor = BookQueryExecutor(db)
+        filters = DefaultFilterBuilder(db)
+        service = BookServices(book, executor, filters)
+        """
 
     def get_book_details(self) -> list[dict[str, Any]]:
         """
