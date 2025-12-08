@@ -50,8 +50,9 @@ class BookServices:
             self.book.book_id = rows[0]["book_id"]
             logging.info("Book created successfully with id: %s", self.book.book_id)
         except Exception as e:
-            logging.exception("Failed to create book")
-            raise DatabaseServiceError("Failed to create book") from e
+            create_msg = "Failed to create book"
+            logging.exception(create_msg)
+            raise DatabaseServiceError(create_msg) from e
 
         """
         example use case
@@ -79,12 +80,14 @@ class BookServices:
         try:
             get_book = self.executor.execute(query, values)
             if not get_book:
-                logging.warning("Failed to find book in the database")
-                raise BookNotFoundError("Book not found in the database")
+                book_msg = "Book not found in the database"
+                logging.warning(book_msg)
+                raise BookNotFoundError(book_msg)
             return get_book[0]
         except Exception as e:
-            logging.exception("Failed to retrieve book details")
-            raise DatabaseServiceError("Failed to retrieve book details") from e
+            fail_msg = "Failed to retrieve book details"
+            logging.exception(fail_msg)
+            raise DatabaseServiceError(fail_msg) from e
 
     def delete_book(self) -> None:
         """
@@ -122,8 +125,11 @@ class BookServices:
                 and {conditions}
                 """
             self.executor.execute(availability, values)
+            logging.info("%s: marked as deleted successfully", self.book.title)
         except Exception as e:
-            raise DatabaseServiceError("Failed to delete book") from e
+            del_msg = "Failed to mark book as deleted"
+            logging.exception(del_msg)
+            raise DatabaseServiceError(del_msg) from e
 
     def update_book_rating(self, new_rating: int) -> None:
         """
