@@ -21,7 +21,7 @@ def test_add_book(db_session: DB) -> None:
     service = BookServices(book, executor, filters)
     service.create_book()
     output = execute_query(
-        "SELECT * FROM book WHERE title = 'test'", db_details=db_session
+        "select * from book where title = 'test'", db_details=db_session
     )
     assert output is not None
     assert isinstance(output, list)

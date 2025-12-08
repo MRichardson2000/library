@@ -3,6 +3,7 @@ from data.dataclasses.db_dataclass import DB
 from data.classes.book import Book
 from tests.auto_clear_db import auto_clear_book_table
 from src.services.book_services import BookServices
+from src.services.base_services import BookQueryExecutor, DefaultFilterBuilder
 from typing import Any
 
 
@@ -15,7 +16,9 @@ def test_update_rating(db_session: DB) -> None:
         genre="test",
         rating=3,
     )
-    service = BookServices(book, db_session)
+    executor = BookQueryExecutor(db_session)
+    filters = DefaultFilterBuilder(db_session)
+    service = BookServices(book, executor, filters)
     service.create_book()
     output_before = execute_query(
         "select * from book where title = 'test'", db_details=db_session
