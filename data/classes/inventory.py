@@ -4,23 +4,32 @@ from typing import Any
 
 class Inventory:
     def __init__(self, book: Book, quantity: int, restock_threshold: int = 2) -> None:
-        if not isinstance(quantity, int):  # type: ignore
-            raise TypeError("Quantity must be an integer")
-        if quantity < 0:
-            raise ValueError("Quantity cannot be negative")
         self.book = book
         self._quantity = quantity
+        Inventory.valid_quantity(quantity)
         self._restock_threshold = restock_threshold
 
     def __repr__(self) -> str:
-        return f"Inventory (book={self.book.title}, quantity={self.quantity})"
+        return f"Inventory (book={self.book.title}, quantity={self.quantity}, current restock_threshold={self.restock_threshold})"
 
-    def to_dict(self) -> dict[str, Any]:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Inventory):
+            return NotImplemented
+        return self.book == other.book
+
+    def __hash__(self) -> int:
+        return hash(self.book)
+
+    def filters(self) -> dict[str, Any]:
         return {
             "book_id": self.book.book_id,
-            "title": self.book.title,
-            "quantity": self.quantity,
+            "quantity_available": self.quantity,
+            "restock_threshold": self.restock_threshold,
         }
+
+    @property
+    def restock_threshold(self) -> int:
+        return self._restock_threshold
 
     @property
     def quantity(self) -> int:
@@ -28,22 +37,15 @@ class Inventory:
 
     @quantity.setter
     def quantity(self, new_quantity: int) -> None:
-        if not isinstance(new_quantity, int):  # type: ignore
-            raise TypeError("New Quantity must be an integer")
-        if new_quantity < 0:
-            raise ValueError("New Quantity cannot be negative")
+        Inventory.valid_quantity(new_quantity)
         self._quantity = new_quantity
 
     def add_stock(self, amount: int) -> None:
-        if amount < 0:
-            raise ValueError("amount must be greater than 0")
+        Inventory.valid_quantity(amount)
         self._quantity += amount
 
     def remove_stock(self, amount: int) -> None:
-        if amount <= 0:
-            raise ValueError("stock removal must not be 0 or less")
-        if amount > self._quantity:
-            raise ValueError("Not enough stock to remove")
+        Inventory.valid_quantity(amount)
         self._quantity -= amount
 
     @property
@@ -52,3 +54,28 @@ class Inventory:
 
     def needs_restock(self) -> bool:
         return self._quantity < self._restock_threshold
+
+    @staticmethod
+    def valid_quantity(quantity: int) -> None:
+        if not isinstance(quantity, int):  # type: ignore
+            raise TypeError(
+                f"Quantity must be of type int not {type(quantity).__name__}"
+            )
+        if quantity < 0:
+            raise ValueError("Quantity cannot be negative")
+
+    @classmethod
+    def from_db_rows(cls, row: dict[str, Any]) -> "Inventory":
+        book = Book.from_db_rows(row)
+        return cls(
+            book=book,
+            quantity=row.get("quantity_available", 0),
+            restock_threshold=row.get("restock_threshold", 2),
+        )
+
+    def custom_repr(self) -> str:
+        return (
+            f"Inventory(book={self.book}), "
+            f"Quantity={self.quantity}, "
+            f"restock_threshold={self.restock_threshold})"
+        )
