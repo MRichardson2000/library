@@ -1,10 +1,9 @@
 from __future__ import annotations
 from data.classes.book import Book
-from data.database.dbconn import execute_query
 from data.database.sql_models import book_insert
 from data.dataclasses.db_dataclass import DB
 from data.classes.book import Book
-from src.services.base_services import BaseService
+from src.services.base_services import DefaultFilterBuilder, QueryExecutor
 from src.services.exceptions import (
     BookAlreadyExistsError,
     DatabaseServiceError,
@@ -13,8 +12,10 @@ from src.services.exceptions import (
 from typing import Any
 
 
-class BookServices(BaseService):
+class BookServices:
     def __init__(self, book: Book, db: DB) -> None:
+        self.filters = DefaultFilterBuilder(db)
+        self.executor = QueryExecutor(db)
         self.book = book
         self.db = db
 
@@ -26,13 +27,13 @@ class BookServices(BaseService):
             BookAlreadyExistsError: If a book with the same details exists.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.book.filters())
+        conditions, values = self.filters.build_conditions(self.book.filters())
         query = f"select * from book where {conditions}"
         try:
-            book_check = execute_query(query, values, self.db)
+            book_check = self.executor.execute(query, values)
             if book_check:
                 raise BookAlreadyExistsError("Book already exists")
-            rows = execute_query(book_insert, values, self.db)
+            rows = self.executor.execute(book_insert, values)
             if not rows or "book_id" not in rows[0]:
                 raise DatabaseServiceError("Insert did not return a book_id")
             self.book.book_id = rows[0]["book_id"]
@@ -50,10 +51,10 @@ class BookServices(BaseService):
             BookNotFoundError: If no book is found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.book.filters())
+        conditions, values = self.filters.build_conditions(self.book.filters())
         query = f"select * from book where {conditions}"
         try:
-            get_book = execute_query(query, values, self.db)
+            get_book = self.executor.execute(query, values)
             if not get_book:
                 raise BookNotFoundError("Book not found in the database")
             return get_book
@@ -69,10 +70,10 @@ class BookServices(BaseService):
             BookNotFoundError: If the book is not found in the database.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.book.filters())
+        conditions, values = self.filters.build_conditions(self.book.filters())
         verification_query = f"select * from book where {conditions}"
         try:
-            rows = execute_query(verification_query, values)
+            rows = self.executor.execute(verification_query, values)
             if not rows:
                 raise BookNotFoundError("Delete book query returned no results")
             if len(rows) > 1:
@@ -82,7 +83,7 @@ class BookServices(BaseService):
                             set deleted = True
                             where {conditions}
                             """
-            execute_query(delete_query, values)
+            self.executor.execute(delete_query, values)
             availability = f"""
                 update inventory i
                 set is_available = False
@@ -90,7 +91,7 @@ class BookServices(BaseService):
                 where i.book_id = b.book_id
                 and {conditions}
                 """
-            execute_query(availability, values)
+            self.executor.execute(availability, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to delete book") from e
 
@@ -105,10 +106,10 @@ class BookServices(BaseService):
             ValueError: If no results are found or multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.book.id_filter())
+        conditions, values = self.filters.build_conditions(self.book.id_filter())
         find_book = f"select * from book where {conditions}"
         try:
-            rows = execute_query(find_book, values, self.db)
+            rows = self.executor.execute(find_book, values)
             if not rows:
                 raise BookNotFoundError("Query returned no results, book not found")
             if len(rows) > 1:
@@ -120,6 +121,6 @@ class BookServices(BaseService):
                             where {conditions}
                             """
             values["rating"] = new_rating
-            execute_query(update_query, values, self.db)
+            self.executor.execute(update_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to update book rating") from e

@@ -1,9 +1,8 @@
 from __future__ import annotations
-from data.database.dbconn import execute_query
 from data.dataclasses.db_dataclass import DB
 from data.database.sql_models import users_insert
 from data.classes.user import User
-from src.services.base_services import BaseService
+from src.services.base_services import DefaultFilterBuilder, QueryExecutor
 from src.services.exceptions import (
     UserAlreadyExistsError,
     DatabaseServiceError,
@@ -14,6 +13,8 @@ from typing import Any
 
 class UserServices:
     def __init__(self, user: User, db: DB) -> None:
+        self.filters = DefaultFilterBuilder(db)
+        self.executor = QueryExecutor(db)
         self.user = user
         self.db = db
 
@@ -25,13 +26,13 @@ class UserServices:
             UserAlreadyExistsError: If user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = self.filters.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
-            user_check = execute_query(query, values, self.db)
+            user_check = self.executor.execute(query, values)
             if user_check:
                 raise UserAlreadyExistsError("User already exists")
-            execute_query(users_insert, values, self.db)
+            self.executor.execute(users_insert, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to create user") from e
 
@@ -46,10 +47,10 @@ class UserServices:
             UserNotFoundError: If no user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = self.filters.build_conditions(self.user.filters())
         query = f"select * from users where {conditions}"
         try:
-            get_user = execute_query(query, values)
+            get_user = self.executor.execute(query, values)
             if not get_user:
                 raise UserNotFoundError("User not found in the database")
             return get_user
@@ -68,11 +69,11 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = self.filters.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.last_name = new_surname
         try:
-            rows = execute_query(find_user_query, values)
+            rows = self.executor.execute(find_user_query, values)
             if not rows:
                 raise UserNotFoundError("Unable to find user, surname change aborted")
             if len(rows) > 1:
@@ -81,10 +82,11 @@ class UserServices:
                 )
             update_query = f"""
                             update user
-                            set last_name = {self.user.last_name}
+                            set last_name = :last_name
                             where {conditions}
                             """
-            execute_query(update_query)
+            values["last_name"] = self.user.last_name
+            self.executor.execute(update_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to change users surname") from e
 
@@ -100,12 +102,12 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(
+        conditions, values = self.filters.build_conditions(
             {"user_id": self.user.user_id}
         )
         find_user_query = f"select * from users where {conditions}"
         try:
-            user_check = execute_query(find_user_query, values)
+            user_check = self.executor.execute(find_user_query, values)
             if not user_check:
                 raise UserNotFoundError("Unable to find user, email change aborted")
             if len(user_check) > 1:
@@ -119,7 +121,7 @@ class UserServices:
                             returning user_id;
                             """
             values["new_email"] = new_email_address
-            rows = execute_query(update_query, values, self.db)
+            rows = self.executor.execute(update_query, values)
             if not rows or "user_id" not in rows[0]:
                 raise DatabaseServiceError("Modification did not find a user_id")
             self.user.user_id = rows[0]["user_id"]
@@ -139,11 +141,11 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = self.filters.build_conditions(self.user.filters())
         find_user_query = f"select * from users where {conditions}"
         self.user.phone_number = new_phone_number
         try:
-            rows = execute_query(find_user_query, values)
+            rows = self.executor.execute(find_user_query, values)
             if not rows:
                 raise UserNotFoundError(
                     "Unable to find user, phone number change aborted"
@@ -154,10 +156,11 @@ class UserServices:
                 )
             update_query = f"""
                             update user
-                            set phone_number = {self.user.phone_number}
+                            set phone_number = :phone_number
                             where {conditions}
                             """
-            execute_query(update_query)
+            values["last_name"] = self.user.last_name
+            self.executor.execute(update_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to change phone number") from e
 
@@ -169,10 +172,10 @@ class UserServices:
             UserNotFoundError: If the user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        conditions, values = BaseService.build_conditions(self.user.filters())
+        conditions, values = self.filters.build_conditions(self.user.filters())
         verification_query = f"select * from users where {conditions}"
         try:
-            rows = execute_query(verification_query, values)
+            rows = self.executor.execute(verification_query, values)
             if not rows:
                 raise UserNotFoundError("User not found, deletion aborted")
             if len(rows) > 1:
@@ -182,6 +185,6 @@ class UserServices:
                             set deleted = True
                             where {conditions}
                             """
-            execute_query(delete_query, values)
+            self.executor.execute(delete_query, values)
         except Exception as e:
             raise DatabaseServiceError("Failed to delete user") from e
