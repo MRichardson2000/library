@@ -142,14 +142,19 @@ class BookServices:
             ValueError: If no results are found or multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
+        logging.info("Attempting to update book rating: %s", self.book.title)
         conditions, values = self.filters.build_conditions(self.book.id_filter())
         find_book = f"select * from book where {conditions}"
         try:
             rows = self.executor.execute(find_book, values)
             if not rows:
-                raise BookNotFoundError("Query returned no results, book not found")
+                val_msg = "Query returned no results, book not found"
+                logging.warning(val_msg)
+                raise BookNotFoundError(val_msg)
             if len(rows) > 1:
-                raise ValueError("Update aborted due to multiple rows being found")
+                mulrow_msg = "Update aborted due to multiple rows being found"
+                logging.warning(mulrow_msg)
+                raise ValueError(mulrow_msg)
             self.book.rating = new_rating
             update_query = f"""
                             update book
@@ -158,5 +163,8 @@ class BookServices:
                             """
             values["rating"] = new_rating
             self.executor.execute(update_query, values)
+            logging.info("Rating updated successfully for: %s", self.book.title)
         except Exception as e:
-            raise DatabaseServiceError("Failed to update book rating") from e
+            rat_msg = "Failed to update book rating"
+            logging.exception(rat_msg)
+            raise DatabaseServiceError(rat_msg) from e
