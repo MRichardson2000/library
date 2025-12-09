@@ -1,12 +1,18 @@
 from data.classes.book import Book
+from src.services.data_validaters import Validaters as V
 from typing import Any
 
 
 class Inventory:
-    def __init__(self, book: Book, quantity: int, restock_threshold: int = 2) -> None:
+    def __init__(
+        self,
+        book: Book,
+        quantity: int,
+        restock_threshold: int = 2,
+    ) -> None:
         self.book = book
         self._quantity = quantity
-        Inventory.valid_quantity(quantity)
+        V.valid_quantity(quantity)
         self._restock_threshold = restock_threshold
 
     def __repr__(self) -> str:
@@ -37,15 +43,15 @@ class Inventory:
 
     @quantity.setter
     def quantity(self, new_quantity: int) -> None:
-        Inventory.valid_quantity(new_quantity)
+        V.valid_quantity(new_quantity)
         self._quantity = new_quantity
 
     def add_stock(self, amount: int) -> None:
-        Inventory.valid_quantity(amount)
+        V.valid_quantity(amount)
         self._quantity += amount
 
     def remove_stock(self, amount: int) -> None:
-        Inventory.valid_quantity(amount)
+        V.valid_quantity(amount)
         self._quantity -= amount
 
     @property
@@ -54,15 +60,6 @@ class Inventory:
 
     def needs_restock(self) -> bool:
         return self._quantity < self._restock_threshold
-
-    @staticmethod
-    def valid_quantity(quantity: int) -> None:
-        if not isinstance(quantity, int):  # type: ignore
-            raise TypeError(
-                f"Quantity must be of type int not {type(quantity).__name__}"
-            )
-        if quantity < 0:
-            raise ValueError("Quantity cannot be negative")
 
     @classmethod
     def from_db_rows(cls, row: dict[str, Any]) -> "Inventory":
@@ -79,3 +76,16 @@ class Inventory:
             f"Quantity={self.quantity}, "
             f"restock_threshold={self.restock_threshold})"
         )
+
+    """
+    example use case of the above
+
+        row = {
+        "book_id": 1,
+        "quantity": "2",
+        "restock_threshold": False
+    }
+
+    inventory = Inventory.from_db_rows(row)
+    print(inventory) 
+"""

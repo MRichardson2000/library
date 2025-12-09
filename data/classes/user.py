@@ -1,4 +1,5 @@
 from data.classes.book import Book
+from src.services.data_validaters import Validaters as V
 from typing import Optional, Any
 
 
@@ -9,18 +10,59 @@ class User:
         last_name: str,
         email_address: str,
         phone_number: str,
+        deleted: bool = False,
         books_loaned: list[Book] | None = None,
         user_id: Optional[int] = None,
     ) -> None:
-        self.first_name = first_name
-        self.last_name = last_name
+        self._first_name = first_name
+        self._last_name = last_name
         self._email_address = email_address
         self._phone_number = phone_number
+        V.valid_strings(first_name, last_name, email_address, phone_number)
+        if user_id:
+            V.valid_ints(user_id)
+        self.deleted = deleted
         self._books_loaned = books_loaned if books_loaned is not None else []
-        self.user_id = user_id
+        self._user_id = user_id
 
     def __repr__(self) -> str:
         return f"User(id={self.user_id}, name={self.first_name} {self.last_name}, loans={len(self.books_loaned)})"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, User):
+            return NotImplemented
+        if self._user_id is not None and other._user_id is not None:
+            return self.user_id == other.user_id
+        return (self.user_id, self.first_name, self.last_name) == (
+            other.user_id,
+            other.first_name,
+            other.last_name,
+        )
+
+    def __hash__(self) -> int:
+        if self._user_id is not None:
+            return hash(self.user_id)
+        return hash((self.first_name, self.last_name))
+
+    @property
+    def user_id(self) -> int | None:
+        return self._user_id
+
+    @property
+    def first_name(self) -> str:
+        return self._first_name
+
+    @property
+    def last_name(self) -> str:
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, new_last_name: str) -> None:
+        self._last_name = new_last_name
+
+    @user_id.setter
+    def user_id(self, value: int) -> None:
+        self._user_id = value
 
     @property
     def email_address(self) -> str:
@@ -38,16 +80,18 @@ class User:
 
     @phone_number.setter
     def phone_number(self, new_phone_num: str) -> None:
-        if not isinstance(new_phone_num, str):  # type: ignore
-            raise TypeError("Phone number must be entered a string")
         self._phone_number = new_phone_num
 
     @property
     def books_loaned(self) -> list[Book]:
         return self._books_loaned
 
+    @books_loaned.setter
+    def books_loaned(self, new_list: list[Book]) -> None:
+        self._books_loaned = new_list
+
     def update_last_name(self, new_last_name: str) -> None:
-        self.last_name = new_last_name
+        self._last_name = new_last_name
 
     def get_loaned_books_amount(self) -> int:
         return len(self._books_loaned)
@@ -59,3 +103,37 @@ class User:
             "email_address": self.email_address,
             "phone_number": self.phone_number,
         }
+
+    @classmethod
+    def from_db_rows(cls, row: dict[str, Any]) -> "User":
+        return cls(
+            user_id=row.get("user_id"),
+            first_name=row.get("first_name", ""),
+            last_name=row.get("last_name", ""),
+            email_address=row.get("email_address", ""),
+            phone_number=row.get("phone_number", ""),
+            deleted=row.get("deleted", False),
+        )
+
+    """
+    example use case of the above
+
+        row = {
+        "user_id": 1,
+        "first_name": "test",
+        "last_name": "test",
+        "email_address": "test@test.test.test",
+        "phone_number": "0123456789",
+        "deleted": False,
+    }
+
+    user = User.from_db_row(row)
+    print(user) 
+    """
+
+    def add_loan(self, book: Book) -> None:
+        self.books_loaned.append(book)
+
+    def remove_loan(self, book: Book) -> None:
+        list_of_books = self.books_loaned
+        self.books_loaned = [b for b in list_of_books if b.title != book.title]
