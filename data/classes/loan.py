@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from data.classes.book import Book
 from data.classes.user import User
 from data.classes.inventory import Inventory
-from typing import Optional
+from typing import Optional, Any
 from src.services.data_validaters import Validaters as V
 
 
@@ -12,12 +12,17 @@ class Loan:
         book: Book,
         user: User,
         inventory: Inventory,
+        status: str = "Available",
         borrow_date: Optional[datetime] = None,
         duration_days: int = 30,
+        loan_id: Optional[int] = None,
     ) -> None:
+        self.loan_id = loan_id
         self.book = book
         self.user = user
         self.inventory = inventory
+        self.status = status
+        self.inventory_id = inventory.inventory_id
         self._borrow_date = borrow_date or datetime.now()
         V.valid_duration_days(duration_days)
         self._due_date = self.borrow_date + timedelta(days=duration_days)
@@ -36,9 +41,10 @@ class Loan:
 
     def return_book(self, now: Optional[datetime] = None) -> None:
         self.return_date = now or datetime.now()
+        self.status = "Available"
         if self.return_date > self.borrow_date + timedelta(days=30):
             pass
-            # add logic here for managing fees / fee class
+            # add logic here for managing fees later / fee class
         self.user.remove_loan(self.book)
         self.inventory.add_stock(1)
 
@@ -64,3 +70,13 @@ class Loan:
     @property
     def due_date(self) -> datetime:
         return self._due_date
+
+    def filters(self) -> dict[str, Any]:
+        return {
+            "book_id": self.book.book_id,
+            "user_id": self.user.user_id,
+            "inventory_id": self.inventory.inventory_id,
+            "loan_time": self.borrow_date,
+            "due_date": self.due_date,
+            "Available": self.status,
+        }

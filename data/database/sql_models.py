@@ -55,12 +55,14 @@ loan_table = """
         loan_id bigserial primary key,
         book_id int not null,
         user_id int not null,
-        loan_time timestamp,
-        due_date timestamp,
-        late_fee boolean not null default false,
-        overdue_return bool not null default false,
+        inventory_id int not null,
+        loan_time timestamp not null default now(),
+        due_date timestamp not null,
+        return_date timestamp,
+        status varchar(20) not null default 'Available',
         constraint fk_loan_book foreign key (book_id) references book(book_id) on delete restrict,
-        constraint fk_loan_user foreign key (user_id) references users(user_id) on delete restrict
+        constraint fk_loan_user foreign key (user_id) references users(user_id) on delete restrict,
+        constraint fk_loan_inventory foreign key (inventory_id) references inventory(inventory_id) on delete restrict
     );
 """
 
@@ -68,13 +70,17 @@ loan_insert = """
     insert into loan (
         book_id,
         user_id,
+        inventory_id,
         loan_time,
-        due_date
+        due_date,
+        status
     ) values (
         :book_id,
         :user_id,
+        :inventory_id,
         :loan_time,
-        :due_date
+        :due_date,
+        'Available'
     );
 """
 
