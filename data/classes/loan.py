@@ -40,6 +40,7 @@ class Loan:
             pass
             # add logic here for managing fees / fee class
         self.user.remove_loan(self.book)
+        self.inventory.add_stock(1)
 
     def extend_loan(self, extra_days: int) -> None:
         if extra_days <= 0:
@@ -61,9 +62,5 @@ class Loan:
         )
 
     @property
-    def due_date(self) -> datetime:
-        return self._due_date
-
-    @due_date.getter
     def due_date(self) -> datetime:
         return self._due_date
