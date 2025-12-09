@@ -247,3 +247,41 @@ class UserServices:
             fail_msg = "Failed to delete user"
             logging.exception(fail_msg)
             raise DatabaseServiceError(fail_msg) from e
+
+    def restore_user(self) -> None:
+        """
+        Restore user from the database if they exist
+
+        Raises:
+            UserNotFoundError: If user is not found.
+            DatabaseServiceError: If a database operation fails.
+        """
+        logging.info(
+            "Attempting to restore user: %s %s",
+            self.user.first_name,
+            self.user.last_name,
+        )
+        conditions, values = self.filters.build_conditions(self.user.filters())
+        query = f"select * from users where {conditions}"
+        try:
+            user_check = self.executor.execute(query, values)
+            if not user_check:
+                usr_msg = "User not found in the database"
+                logging.warning(usr_msg)
+                raise UserNotFoundError(usr_msg)
+            if len(user_check) > 1:
+                mulrow_msg = "Modification aborted due to multiple rows being found"
+                logging.warning(mulrow_msg)
+                raise ValueError(mulrow_msg)
+            update_query = f"""
+                            updater user
+                            set deleted = False
+                            where {conditions}
+                            """
+            values["deleted"] = self.user.deleted
+            self.executor.execute(update_query, values)
+            logging.info("User restored successfully")
+        except Exception as e:
+            fail_msg = "failed to restore user"
+            logging.exception(fail_msg)
+            raise DatabaseServiceError(fail_msg) from e

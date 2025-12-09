@@ -125,11 +125,54 @@ class BookServices:
                 and {conditions}
                 """
             self.executor.execute(availability, values)
+            self.book.mark_deleted()
             logging.info("%s: marked as deleted successfully", self.book.title)
         except Exception as e:
             del_msg = "Failed to mark book as deleted"
             logging.exception(del_msg)
             raise DatabaseServiceError(del_msg) from e
+
+    def restore_book(self) -> None:
+        """
+        Mark the deleted column as false for the book in the database
+
+        Raises:
+            ValueError: If no results are found or multiple matches exist.
+            DatabaseServiceError: If a database operation fails.
+        """
+        logging.info("Attempting to modify deleted column to false in the database")
+        conditions, values = self.filters.build_conditions(self.book.filters())
+        verification_query = f"select * from book where {conditions}"
+        try:
+            rows = self.executor.execute(verification_query, values)
+            if not rows:
+                row_msg = "restore query returned no results"
+                logging.warning(row_msg)
+                raise BookNotFoundError(row_msg)
+            if len(rows) > 1:
+                len_msg = "restore aborted due to multiple rows being found"
+                logging.warning(len_msg)
+                raise ValueError(len_msg)
+            restore_query = f"""
+                            update book
+                            set deleted = False
+                            where {conditions}
+                            """
+            self.executor.execute(restore_query, values)
+            availability = f"""
+                            update inventory i
+                            set is_available = True
+                            from book b
+                            where i.book_id = b.book_id
+                            and {conditions}
+                            """
+            self.executor.execute(availability, values)
+            self.book.restore()
+            logging.info("%s: restored successfully", self.book.title)
+        except Exception as e:
+            res_msg = "Failed to restore book"
+            logging.exception(res_msg)
+            raise DatabaseServiceError(res_msg) from e
 
     def update_book_rating(self, new_rating: int) -> None:
         """
