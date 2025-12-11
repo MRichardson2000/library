@@ -93,3 +93,43 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+
+class MissingBook(Exception):
+    """Custom exception for missing book errors"""
+    pass
+
+class MissingAuthor(Exception):
+    """Custom exception for missing author errors"""
+    pass
+
+
+def missing_book(func):
+    """Decorator to handle missing book exceptions"""
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if result is None:
+            raise MissingBook("The requested book does not exist.")
+        return result
+    return wrapper
+
+
+def missing_author(func):
+    """Decorator to handle missing author exceptions"""
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if result is None:
+            raise MissingAuthor("The requested author does not exist.")
+        return result
+    return wrapper
+
+
+@missing_book
+@missing_author
+def execute_query(query: str, engine: Engine = db):
+    """Funciton to allow execution of queries that return results"""
+    with engine.connect() as conn:
+        data = conn.execute(text(query))
+        return data.fetchall()
