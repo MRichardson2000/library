@@ -73,6 +73,7 @@ loan_insert = """
         inventory_id,
         loan_time,
         due_date,
+        return_date
         status
     ) values (
         :book_id,
@@ -80,7 +81,8 @@ loan_insert = """
         :inventory_id,
         :loan_time,
         :due_date,
-        'Available'
+        :return_date
+        :status
     );
 """
 

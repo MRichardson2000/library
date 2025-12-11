@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
+from data.classes.loan_status import LoanStatus
 from data.classes.book import Book
 from data.classes.user import User
 from data.classes.inventory import Inventory
 from typing import Optional, Any
 from src.services.data_validaters import Validaters as V
+from enum import Enum
 
 
 class Loan:
@@ -12,8 +14,8 @@ class Loan:
         book: Book,
         user: User,
         inventory: Inventory,
-        status: str = "Available",
-        borrow_date: Optional[datetime] = None,
+        status: LoanStatus = LoanStatus.AVAILABLE,
+        loan_time: Optional[datetime] = None,
         duration_days: int = 30,
         loan_id: Optional[int] = None,
     ) -> None:
@@ -21,13 +23,13 @@ class Loan:
         self.book = book
         self.user = user
         self.inventory = inventory
-        self.status = status
+        self._status = status
         self.inventory_id = inventory.inventory_id
-        self._borrow_date = borrow_date or datetime.now()
+        self._loan_time = loan_time or datetime.now()
         V.valid_duration_days(duration_days)
-        self._due_date = self.borrow_date + timedelta(days=duration_days)
+        self._due_date = self.loan_time + timedelta(days=duration_days)
         self.return_date: Optional[datetime] = None
-        V.valid_date(self._borrow_date, self._due_date)
+        V.valid_date(self._loan_time, self._due_date)
         if self.return_date:
             V.valid_date(self.return_date)
 
@@ -36,16 +38,15 @@ class Loan:
         return f"Loan (book={self.book.title}, user={self.user.first_name}, due_date={self.due_date.date()}, status={status})"
 
     def borrow_book(self) -> None:
-        self.user.add_loan(self.book)
         self.inventory.remove_stock(1)
 
     def return_book(self, now: Optional[datetime] = None) -> None:
         self.return_date = now or datetime.now()
         self.status = "Available"
-        if self.return_date > self.borrow_date + timedelta(days=30):
+        if self.return_date > self.loan_time + timedelta(days=30):
             pass
             # add logic here for managing fees later / fee class
-        self.user.remove_loan(self.book)
+
         self.inventory.add_stock(1)
 
     def extend_loan(self, extra_days: int) -> None:
@@ -58,8 +59,13 @@ class Loan:
         return self.return_date is not None
 
     @property
-    def borrow_date(self) -> datetime:
-        return self._borrow_date
+    def loan_time(self) -> datetime:
+        return self._loan_time
+
+    @loan_time.setter
+    def loan_time(self, new_datetime: datetime = datetime.now()):
+        self._loan_time = new_datetime
+        return self._loan_time
 
     @property
     def is_overdue(self, grace_days: int = 0) -> bool:
@@ -76,7 +82,18 @@ class Loan:
             "book_id": self.book.book_id,
             "user_id": self.user.user_id,
             "inventory_id": self.inventory.inventory_id,
-            "loan_time": self.borrow_date,
+            "loan_time": self.loan_time,
             "due_date": self.due_date,
-            "Available": self.status,
+            "return_date": self.return_date,
+            "status": self.status,
         }
+
+    @property
+    def status(self) -> Enum:
+        return self._status
+
+    @status.setter
+    def status(self, value: str) -> None:
+        allowed = {"Available", "Borrowed", "Returned", "Overdue"}
+        if value not in allowed:
+            raise ValueError(f"Value must be one of the following: {allowed}")

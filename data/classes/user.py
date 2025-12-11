@@ -11,7 +11,6 @@ class User:
         email_address: str,
         phone_number: str,
         deleted: bool = False,
-        books_loaned: list[Book] | None = None,
         user_id: Optional[int] = None,
     ) -> None:
         self._first_name = first_name
@@ -22,7 +21,6 @@ class User:
         if user_id:
             V.valid_ints(user_id)
         self.deleted = deleted
-        self._books_loaned = books_loaned if books_loaned is not None else []
         self._user_id = user_id
 
     def __repr__(self) -> str:
@@ -130,10 +128,3 @@ class User:
     user = User.from_db_row(row)
     print(user) 
     """
-
-    def add_loan(self, book: Book) -> None:
-        self.books_loaned.append(book)
-
-    def remove_loan(self, book: Book) -> None:
-        list_of_books = self.books_loaned
-        self.books_loaned = [b for b in list_of_books if b.title != book.title]

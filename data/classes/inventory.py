@@ -48,11 +48,11 @@ class Inventory:
         V.valid_quantity(new_quantity)
         self._quantity = new_quantity
 
-    def add_stock(self, amount: int) -> None:
+    def add_stock(self, amount: int = 1) -> None:
         V.valid_quantity(amount)
         self._quantity += amount
 
-    def remove_stock(self, amount: int) -> None:
+    def remove_stock(self, amount: int = 1) -> None:
         V.valid_quantity(amount)
         if amount > self._quantity:
             raise ValueError("Not enough stock to remove")
