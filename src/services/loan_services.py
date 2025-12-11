@@ -41,11 +41,22 @@ class LoanServices:
 
     def start_loan_transaction(self) -> None:
         """
-        Initiate a loan and store the details in the database
+        Initiate a loan transaction for a book.
+
+        This method attempts to create a new loan record for a user to borrow a book.
+        It performs the following steps:
+        1. Validates that the book exists in the database
+        2. Creates a loan record in the database
+        3. Removes the book from inventory stock
 
         Raises:
-            BookNotFoundError: If a book is not found in the database.
-            DatabaseServiceError: If a database operation fails.
+            BookNotFoundError: If the book is not found in the database.
+            DatabaseServiceError: If any database operation fails during the loan initiation process.
+
+        Note:
+            - Logs information about the loan initiation attempt
+            - Logs a warning if the book is not found
+            - Logs an exception if the database operation fails
         """
         logging.info(
             "Attempting to initiate a loan for book: %s for user: %s %s",
@@ -185,8 +196,8 @@ class LoanServices:
         book_conditions, book_values = self.filters.build_conditions(
             self.book.filters()
         )
-        book_query = f"select * from book where {book_conditions}"
         try:
+            book_query = f"select * from book where {book_conditions}"
             book_check = self.executor.execute(book_query, book_values)
             if not book_check:
                 not_found_msg = "Book not found in the database. Please speak with the admins to register the book. Not eligible for extension until this is done!"
@@ -236,6 +247,10 @@ class LoanServices:
     def verify_loan_permissions(self) -> bool:
         """
         Check if the user has any constraints which restricts them from loaning another book.
+        current constraints:
+            5 books loaned
+            any late books
+            overdue fees - implement later
 
         Raises:
         """
@@ -255,7 +270,59 @@ class LoanServices:
                             """
         try:
             rows = self.executor.execute(get_loaned_books)
-            if len(rows) == 5:
-                pass
+            if rows and len(rows) == 5:
+                limit_error = "5 book loan limit reached, please return a book before trying to loan another"
+                logging.warning(limit_error)
+                raise LoanLimitExceededError(limit_error)
+            get_overdue_books = """
+                                select u.user_id,
+                                       b.book_id,
+                                       b.title,
+                                left join b on l.book_id = b.book_id
+                                left join users u on l.user_id = u.user_id
+                                where l.status = 'Returned'
+                                    and u.user_id = :user_id
+                                    and late_return = True
+                                """
+            overdue_rows = self.executor.execute(get_overdue_books)
+            if overdue_rows:
+                overdue_msg = "You have books that are late to be returned, please return these and pay the late fee before loaning more books"
+                logging.warning(overdue_msg)
+                raise LoanOverdueError(overdue_msg)
         except Exception as e:
-            pass
+            err_msg = "Failed to verify loan permissions"
+            logging.exception(err_msg)
+            raise DatabaseServiceError(err_msg)
+        return True
+
+    # def retrieve_due_date(self) -> datetime:
+    #     """
+    #     Docstring for retrieve_due_date
+    #     """
+    #     logging.info("Attempting to receive due date for book: %s loaned by: %s %s", self.book.title, self.user.first_name, self.user.last_name)
+    #     book_conditions, book_values = self.filters.build_conditions(self.book.filters())
+    #     try:
+    #         book_query = f"select * from book where {book_conditions}"
+    #         book_check = self.executor.execute(book_query, book_values)
+    #         if not book_check:
+    #             book_err = "Book not found in the database, unable to retrieve due date"
+    #             logging.warning(book_err)
+    #             raise LoanNotFoundError(book_err)
+    #         book_id = book_check[0]["book_id"]
+    #         query = (
+    #             f"""
+    #             select *
+    #             from loan
+    #             where book_id = :book_id
+    #             and status = 'Borrowed'
+    #             and return date is null
+    #             """,
+    #             book_id
+    #         )
+    #         book_vals = {"book_id": book_id}
+    #         loan_check_query = self.executor.execute(query)
+    #         if not loan_check_query:
+    #             loan_err = "Book is not currently loaned, unable to retrieve due date"
+    #             logging.warning(loan_err)
+    #             raise LoanNotFoundError(loan_err)
+    #         due_date = loan_check_query[0]["due_date"]

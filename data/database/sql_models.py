@@ -59,6 +59,7 @@ loan_table = """
         loan_time timestamp not null default now(),
         due_date timestamp not null,
         return_date timestamp,
+        late_return bool not null default false,
         status varchar(20) not null default 'Available',
         constraint fk_loan_book foreign key (book_id) references book(book_id) on delete restrict,
         constraint fk_loan_user foreign key (user_id) references users(user_id) on delete restrict,
@@ -74,6 +75,7 @@ loan_insert = """
         loan_time,
         due_date,
         return_date
+        late_return,
         status
     ) values (
         :book_id,
@@ -81,7 +83,8 @@ loan_insert = """
         :inventory_id,
         :loan_time,
         :due_date,
-        :return_date
+        :return_date,
+        :late_return,
         :status
     );
 """

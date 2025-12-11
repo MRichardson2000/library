@@ -69,6 +69,7 @@ class Loan:
 
     @property
     def is_overdue(self, grace_days: int = 0) -> bool:
+        """add grace days as and when necessary. Currently it's 0 as books must be returned on time"""
         return not self.is_returned and datetime.now() > (
             self.due_date + timedelta(days=grace_days)
         )
