@@ -40,3 +40,13 @@ class User:
             phone_number=row.get("phone_number", ""),
             account_state=row.get("account_state", ""),
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "user_id": self._user_id,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email_address": self.email_address,
+            "phone_number": self.phone_number,
+            "account_state": self.account_state,
+        }

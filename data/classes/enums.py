@@ -12,3 +12,8 @@ class AccountState(Enum):
     ACTIVE = "Active"
     DELETED = "Deleted"
     SUSPENDED = "Suspended"
+
+
+class BookState(Enum):
+    AVAILABLE = "Available"
+    DELETED = "Deleted"

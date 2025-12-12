@@ -1,10 +1,11 @@
 from __future__ import annotations
 from data.classes.book import Book
+from data.classes.enums import BookState
 from data.database.sql_models import book_insert
+from data.database.query import FIND_BY_TITLE
+from data.database.dbconn import execute_query, fetch_result
 from data.classes.book import Book
-from src.services.base_services import BookQueryExecutor, FilterBuilder
 from src.services.exceptions import (
-    BookAlreadyExistsError,
     DatabaseServiceError,
     BookNotFoundError,
 )
@@ -13,12 +14,8 @@ from typing import Any
 
 
 class BookServices:
-    def __init__(
-        self, book: Book, executor: BookQueryExecutor, filters: FilterBuilder
-    ) -> None:
+    def __init__(self, book: Book) -> None:
         self.book = book
-        self.executor = executor
-        self.filters = filters
 
     def create_book(self) -> None:
         """
@@ -29,39 +26,14 @@ class BookServices:
             DatabaseServiceError: If a database operation fails.
         """
         logging.info("Attempting to create book: %s", self.book.title)
-        conditions, values = self.filters.build_conditions(self.book.filters())
-        query = f"select * from book where {conditions}"
         try:
-            book_check = self.executor.execute(query, values)
-            if book_check:
-                book_msg = "Book Already exists:"
-                logging.warning(book_msg, "%s", self.book.title)
-                raise BookAlreadyExistsError(book_msg)
-            rows = self.executor.execute(book_insert, values)
-            if not rows or "book_id" not in rows[0]:
-                book_id_msg = "Insert failed for book:"
-                logging.error(
-                    "%s, %s, %s, due to a book_id not being returned",
-                    book_id_msg,
-                    "%s",
-                    self.book.title,
-                )
-                raise DatabaseServiceError(book_id_msg)
-            self.book.book_id = rows[0]["book_id"]
-            logging.info("Book created successfully with id: %s", self.book.book_id)
+            row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not row:
+                execute_query(book_insert, self.book.to_dict())
+                logging.info("Book added to the database successfully")
         except Exception as e:
-            create_msg = "Failed to create book"
-            logging.exception(create_msg)
-            raise DatabaseServiceError(create_msg) from e
-
-        """
-        example use case
-
-        db = DB("user", "pass", "host", "5432", "library")
-        executor = BookQueryExecutor(db)
-        filters = DefaultFilterBuilder(db)
-        service = BookServices(book, executor, filters)
-        """
+            logging.exception("Failed to create book")
+            raise DatabaseServiceError("Failed to create book") from e
 
     def get_book_details(self) -> dict[str, Any]:
         """
@@ -74,20 +46,11 @@ class BookServices:
             BookNotFoundError: If no book is found.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to pull out book details from the database")
-        conditions, values = self.filters.build_conditions(self.book.filters())
-        query = f"select * from book where {conditions}"
         try:
-            get_book = self.executor.execute(query, values)
-            if not get_book:
-                book_msg = "Book not found in the database"
-                logging.warning(book_msg)
-                raise BookNotFoundError(book_msg)
-            return get_book[0]
+            row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            return row[0]
         except Exception as e:
-            fail_msg = "Failed to retrieve book details"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError("Failed to get book details") from e
 
     def delete_book(self) -> None:
         """
@@ -98,39 +61,18 @@ class BookServices:
             BookNotFoundError: If the book is not found in the database.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to mark a book as deleted in the database")
-        conditions, values = self.filters.build_conditions(self.book.filters())
-        verification_query = f"select * from book where {conditions}"
         try:
-            rows = self.executor.execute(verification_query, values)
-            if not rows:
-                row_msg = "Delete book query returned no results"
-                logging.warning(row_msg)
-                raise BookNotFoundError(row_msg)
-            if len(rows) > 1:
-                len_msg = "Deletion aborted due to multiple rows being found"
-                logging.warning(len_msg)
-                raise ValueError(len_msg)
-            delete_query = f"""
-                            update book
-                            set deleted = True
-                            where {conditions}
-                            """
-            self.executor.execute(delete_query, values)
-            availability = f"""
-                update inventory i
-                set is_available = False
-                from book b
-                where i.book_id = b.book_id
-                and {conditions}
-                """
-            self.executor.execute(availability, values)
-            self.book.mark_deleted()
-            logging.info("%s: marked as deleted successfully", self.book.title)
+            row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not row:
+                raise BookNotFoundError()
+            if len(row) > 1:
+                raise ValueError("Multiple rows returned, deletion aborted")
+            self.book.status = BookState.DELETED
+            execute_query(
+                "update book set status = :status", {"status": self.book.status}
+            )
         except Exception as e:
-            del_msg = "Failed to mark book as deleted"
-            logging.exception(del_msg)
-            raise DatabaseServiceError(del_msg) from e
+            raise DatabaseServiceError("Failed to mark book as deleted") from e
 
     def restore_book(self) -> None:
         """
@@ -140,39 +82,18 @@ class BookServices:
             ValueError: If no results are found or multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to modify deleted column to false in the database")
-        conditions, values = self.filters.build_conditions(self.book.filters())
-        verification_query = f"select * from book where {conditions}"
         try:
-            rows = self.executor.execute(verification_query, values)
-            if not rows:
-                row_msg = "restore query returned no results"
-                logging.warning(row_msg)
-                raise BookNotFoundError(row_msg)
-            if len(rows) > 1:
-                len_msg = "restore aborted due to multiple rows being found"
-                logging.warning(len_msg)
-                raise ValueError(len_msg)
-            restore_query = f"""
-                            update book
-                            set deleted = False
-                            where {conditions}
-                            """
-            self.executor.execute(restore_query, values)
-            availability = f"""
-                            update inventory i
-                            set is_available = True
-                            from book b
-                            where i.book_id = b.book_id
-                            and {conditions}
-                            """
-            self.executor.execute(availability, values)
-            self.book.restore()
-            logging.info("%s: restored successfully", self.book.title)
+            row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not row:
+                raise BookNotFoundError()
+            if len(row) > 1:
+                raise ValueError("Multiple rows returned, restore aborted")
+            self.book.status = BookState.AVAILABLE
+            execute_query(
+                "update book set status = :status", {"status": self.book.status}
+            )
         except Exception as e:
-            res_msg = "Failed to restore book"
-            logging.exception(res_msg)
-            raise DatabaseServiceError(res_msg) from e
+            raise DatabaseServiceError("Failed to mark book as restored") from e
 
     def update_book_rating(self, new_rating: int) -> None:
         """
@@ -185,29 +106,17 @@ class BookServices:
             ValueError: If no results are found or multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to update book rating: %s", self.book.title)
-        conditions, values = self.filters.build_conditions(self.book.id_filter())
-        find_book = f"select * from book where {conditions}"
         try:
-            rows = self.executor.execute(find_book, values)
-            if not rows:
-                val_msg = "Query returned no results, book not found"
-                logging.warning(val_msg)
-                raise BookNotFoundError(val_msg)
-            if len(rows) > 1:
-                mulrow_msg = "Update aborted due to multiple rows being found"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
+            row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not row:
+                raise BookNotFoundError()
+            if len(row) > 1:
+                raise ValueError(
+                    "Modification aborted due to multiple rows being found"
+                )
             self.book.rating = new_rating
-            update_query = f"""
-                            update book
-                            set rating = :rating
-                            where {conditions}
-                            """
-            values["rating"] = new_rating
-            self.executor.execute(update_query, values)
-            logging.info("Rating updated successfully for: %s", self.book.title)
+            execute_query(
+                "update book set rating = :rating", {"rating": self.book.rating}
+            )
         except Exception as e:
-            rat_msg = "Failed to update book rating"
-            logging.exception(rat_msg)
-            raise DatabaseServiceError(rat_msg) from e
+            raise DatabaseServiceError("Failed to update book rating") from e
