@@ -1,5 +1,4 @@
 from data.classes.book import Book
-from src.services.data_validaters import Validaters as V
 from typing import Any, Optional
 
 
@@ -14,7 +13,6 @@ class Inventory:
         self.inventory_id = inventory_id
         self.book = book
         self._quantity = quantity
-        V.valid_quantity(quantity)
         self._restock_threshold = restock_threshold
 
     def __repr__(self) -> str:
@@ -45,15 +43,12 @@ class Inventory:
 
     @quantity.setter
     def quantity(self, new_quantity: int) -> None:
-        V.valid_quantity(new_quantity)
         self._quantity = new_quantity
 
     def add_stock(self, amount: int = 1) -> None:
-        V.valid_quantity(amount)
         self._quantity += amount
 
     def remove_stock(self, amount: int = 1) -> None:
-        V.valid_quantity(amount)
         if amount > self._quantity:
             raise ValueError("Not enough stock to remove")
         self._quantity -= amount

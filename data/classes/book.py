@@ -1,5 +1,4 @@
 from typing import Union, Optional, Any
-from src.services.data_validaters import Validaters as V
 
 
 class Book:
@@ -13,14 +12,10 @@ class Book:
         deleted: bool = False,
     ) -> None:
         self._book_id = book_id
-        if book_id:
-            V.valid_ints(book_id)
         self._title = title
         self._author = author
         self._genre = genre
-        V.valid_strings(title, author, genre)
         self._rating = rating
-        V.valid_int_floats(rating)
         self.deleted = deleted
 
     def __repr__(self) -> str:
@@ -68,7 +63,6 @@ class Book:
 
     @rating.setter
     def rating(self, new_rating: Union[int, float]) -> None:
-        V.valid_int_floats(new_rating)
         self._rating = new_rating
 
     def mark_deleted(self) -> None:

@@ -4,7 +4,6 @@ from data.classes.book import Book
 from data.classes.user import User
 from data.classes.inventory import Inventory
 from typing import Optional, Any
-from src.services.data_validaters import Validaters as V
 from enum import Enum
 
 
@@ -26,12 +25,8 @@ class Loan:
         self._status = status
         self.inventory_id = inventory.inventory_id
         self._loan_time = loan_time or datetime.now()
-        V.valid_duration_days(duration_days)
         self._due_date = self.loan_time + timedelta(days=duration_days)
         self.return_date: Optional[datetime] = None
-        V.valid_date(self._loan_time, self._due_date)
-        if self.return_date:
-            V.valid_date(self.return_date)
 
     def __repr__(self) -> str:
         status = "Returned" if self.is_returned else "Active"

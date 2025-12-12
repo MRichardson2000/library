@@ -1,5 +1,4 @@
 from data.classes.book import Book
-from src.services.data_validaters import Validaters as V
 from typing import Optional, Any
 
 
@@ -17,9 +16,6 @@ class User:
         self._last_name = last_name
         self._email_address = email_address
         self._phone_number = phone_number
-        V.valid_strings(first_name, last_name, email_address, phone_number)
-        if user_id:
-            V.valid_ints(user_id)
         self.deleted = deleted
         self._user_id = user_id
 
