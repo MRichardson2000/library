@@ -1,7 +1,8 @@
 from __future__ import annotations
+from data.database.query import FIND_BY_FIRST_NAME
+from data.database.dbconn import execute_query, fetch_result
 from data.database.sql_models import users_insert
 from data.classes.user import User
-from src.services.base_services import UserQueryExecutor, FilterBuilder
 from src.services.exceptions import (
     UserAlreadyExistsError,
     DatabaseServiceError,
@@ -12,12 +13,8 @@ from typing import Any
 
 
 class UserServices:
-    def __init__(
-        self, user: User, executor: UserQueryExecutor, filters: FilterBuilder
-    ) -> None:
+    def __init__(self, user: User) -> None:
         self.user = user
-        self.executor = executor
-        self.filters = filters
 
     def create_user(self) -> None:
         """
@@ -27,29 +24,13 @@ class UserServices:
             UserAlreadyExistsError: If user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info(
-            "Attempting to create user: %s %s",
-            self.user.first_name,
-            self.user.last_name,
-        )
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
         try:
-            user_check = self.executor.execute(query, values)
-            if user_check:
-                usr_msg = "User already exists"
-                logging.warning(usr_msg)
-                raise UserAlreadyExistsError(usr_msg)
-            self.executor.execute(users_insert, values)
-            logging.info(
-                "User created successfully: %s %s",
-                self.user.first_name,
-                self.user.last_name,
-            )
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            execute_query(users_insert, self.user.to_dict())
         except Exception as e:
-            err_msg = "Failed to create user"
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            raise DatabaseServiceError("Failed to create user") from e
 
     def get_user_details(self) -> list[dict[str, Any]]:
         """
@@ -62,25 +43,13 @@ class UserServices:
             UserNotFoundError: If no user is found.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info(
-            "Attempting to retrieve user details %s %s",
-            self.user.first_name,
-            self.user.last_name,
-        )
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
         try:
-            get_user = self.executor.execute(query, values)
-            if not get_user:
-                usr_msg = "User not found in the database"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            logging.info("User details retrieved sucessfully")
-            return get_user
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            return row
         except Exception as e:
-            err_msg = "Failed to retrieve user details"
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            raise DatabaseServiceError("Failed to get user details") from e
 
     def change_surname(self, new_surname: str) -> None:
         """
@@ -94,36 +63,22 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info(
-            "Attempting to update surname for user %s %s",
-            self.user.first_name,
-            self.user.last_name,
-        )
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        find_user_query = f"select * from users where {conditions}"
-        self.user.last_name = new_surname
         try:
-            rows = self.executor.execute(find_user_query, values)
-            if not rows:
-                usr_msg = "Unable to find user, surname change aborted"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            if len(rows) > 1:
-                mulrow_msg = "Modification aborted due to multiple rows being detected"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
-            update_query = f"""
-                            update user
-                            set last_name = :last_name
-                            where {conditions}
-                            """
-            values["last_name"] = self.user.last_name
-            self.executor.execute(update_query, values)
-            logging.info("Surname updated successfully")
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            self.user.last_name = new_surname
+            user_id = row[0]
+            execute_query(
+                "update users set last_name = :last_name where first_name = :first_name and user_id = :user_id",
+                {
+                    "last_name": self.user.last_name,
+                    "first_name": self.user.first_name,
+                    "user_id": self.user._user_id,
+                },
+            )
         except Exception as e:
-            fail_msg = "Failed to change users surname"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError("Failed to change surname") from e
 
     def email_change(self, new_email_address: str) -> None:
         """
