@@ -1,24 +1,20 @@
 from __future__ import annotations
-from datetime import datetime, timedelta
+from datetime import datetime
+from data.database.dbconn import execute_query, fetch_result
+from data.database.query import FIND_BY_TITLE
 from data.database.sql_models import loan_insert
 from data.classes.loan import Loan
 from data.classes.book import Book
 from data.classes.user import User
 from data.classes.inventory import Inventory
 from data.classes.loan import Loan
-from src.services.base_services import LoanQueryExecutor, FilterBuilder
 from src.services.exceptions import (
-    LoanAlreadyExistsError,
     LoanLimitExceededError,
     LoanNotFoundError,
     LoanOverdueError,
     BookNotFoundError,
-    InvalidBookData,
-    InventoryNotFoundError,
-    InventoryUpdateError,
     DatabaseServiceError,
 )
-import logging
 from typing import Any
 
 
@@ -29,15 +25,12 @@ class LoanServices:
         loan: Loan,
         inventory: Inventory,
         book: Book,
-        executor: LoanQueryExecutor,
-        filters: FilterBuilder,
     ) -> None:
         self.user = user
         self.loan = loan
         self.inventory = inventory
         self.book = book
-        self.executor = executor
-        self.filters = filters
+
 
     def start_loan_transaction(self) -> None:
         """
@@ -58,30 +51,17 @@ class LoanServices:
             - Logs a warning if the book is not found
             - Logs an exception if the database operation fails
         """
-        logging.info(
-            "Attempting to initiate a loan for book: %s for user: %s %s",
-            self.book.title,
-            self.user.first_name,
-            self.user.last_name,
-        )
-        book_conditions, book_values = self.filters.build_conditions(
-            self.book.filters()
-        )
-        book_query = f"select * from book where {book_conditions}"
+        self.loan.borrow_book()
         try:
-            book_check = self.executor.execute(book_query, book_values)
-            if not book_check:
-                book_msg = "Book not found in the database. Please speak with the admins to register the book. Not eligible for loan until this is done!"
-                logging.warning(book_msg)
-                raise BookNotFoundError(book_msg)
-            loan_values = self.loan.filters()
-            self.executor.execute(loan_insert, loan_values)
-            self.inventory.remove_stock()
-            logging.info("Loan Successfully initiated.")
+            book_row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not book_row:
+                raise BookNotFoundError()
+            if len(book_row) > 1:
+                raise ValueError("Multiple rows found, unable to initiate loan")
+            execute_query(loan_insert, self.book.to_dict())
         except Exception as e:
-            err_msg = "Failed to initiate loan for book: %s", self.book.title
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            raise DatabaseServiceError("Failed to start loan transaction") from e
+        
 
     def end_loan_transaction(self) -> None:
         """
@@ -89,59 +69,10 @@ class LoanServices:
 
         :param self: Description
         """
-        logging.info(
-            "Attempting to end a loan transaction for book: %s for user %s %s",
-            self.book.title,
-            self.user.first_name,
-            self.user.last_name,
-        )
-        book_conditions, book_values = self.filters.build_conditions(
-            self.book.filters()
-        )
-        book_query = f"select * from book where {book_conditions}"
+        self.loan.return_book()
         try:
-            book_check = self.executor.execute(book_query, book_values)
-            if not book_check:
-                not_found_msg = "Book not found in the database. Please speak with the admins to register the book. Not eligible for loan until this is done!"
-                logging.warning(not_found_msg)
-                raise BookNotFoundError(not_found_msg)
-            book_id = book_check[0]["book_id"]
-            loan_check_query = (
-                f"""
-                                select *
-                                from loan
-                                where book_id = :book_id
-                                and status = 'Borrowed'
-                                and return_date is null
-                                """,
-                book_id,
-            )
-            if not loan_check_query:
-                loan_msg = "%s is currently not loaned by anyone", self.book.title
-                logging.warning(loan_msg)
-                raise LoanNotFoundError(loan_msg)
-            update_query = """
-                            update loan
-                            set status = 'Returned',
-                                return_date = :return_date
-                            where book_id = :book_id
-                            and status = 'Borrowed'
-                            and return date is null
-                            """
-            update_values: dict[str, Any] = {
-                "book_id": self.book.book_id,
-                "return_date": self.loan.return_date or datetime.now(),
-            }
-            self.executor.execute(update_query, update_values)
-            self.inventory.remove_stock()
-            logging.info(
-                "The loan has been ended. %s: is now marked as returned in the database",
-                self.book.title,
-            )
-        except Exception as e:
-            err_msg = "Failed to end loan transaction"
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            loan_row = fetch_result()
+
 
     def loaned_books(self) -> list[dict[str, Any]] | None:
         """
