@@ -21,18 +21,6 @@ class Book:
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author}\n Genre: {self.genre}\n Rating: {self.rating}."
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Book):
-            return NotImplemented
-        if self.book_id is not None and other.book_id is not None:
-            return self.book_id == other.book_id
-        return (self.title, self.author) == (other.title, other.author)
-
-    def __hash__(self) -> int:
-        if self.book_id is not None:
-            return hash(self.book_id)
-        return hash((self.title, self.author))
-
     @property
     def book_id(self) -> Optional[int]:
         return self._book_id

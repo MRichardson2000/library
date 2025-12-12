@@ -18,14 +18,6 @@ class Inventory:
     def __repr__(self) -> str:
         return f"Inventory (book={self.book.title}, quantity={self.quantity}, current restock_threshold={self.restock_threshold})"
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Inventory):
-            return NotImplemented
-        return self.book == other.book
-
-    def __hash__(self) -> int:
-        return hash(self.book)
-
     def filters(self) -> dict[str, Any]:
         return {
             "book_id": self.book.book_id,

@@ -22,22 +22,6 @@ class User:
     def __repr__(self) -> str:
         return f"User(id={self.user_id}, name={self.first_name} {self.last_name}, loans={len(self.books_loaned)})"
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, User):
-            return NotImplemented
-        if self._user_id is not None and other._user_id is not None:
-            return self.user_id == other.user_id
-        return (self.user_id, self.first_name, self.last_name) == (
-            other.user_id,
-            other.first_name,
-            other.last_name,
-        )
-
-    def __hash__(self) -> int:
-        if self._user_id is not None:
-            return hash(self.user_id)
-        return hash((self.first_name, self.last_name))
-
     @property
     def user_id(self) -> int | None:
         return self._user_id
