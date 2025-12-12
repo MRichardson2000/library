@@ -1,5 +1,5 @@
 from data.classes.book import Book
-from typing import Any, Optional
+from typing import Any
 
 
 class Inventory:
@@ -7,77 +7,43 @@ class Inventory:
         self,
         book: Book,
         quantity: int,
-        inventory_id: Optional[int],
+        inventory_id: int | None = None,
         restock_threshold: int = 2,
     ) -> None:
-        self.inventory_id = inventory_id
+        self._inventory_id = inventory_id
         self.book = book
-        self._quantity = quantity
-        self._restock_threshold = restock_threshold
+        self.quantity = quantity
+        self.restock_threshold = restock_threshold
 
     def __repr__(self) -> str:
         return f"Inventory (book={self.book.title}, quantity={self.quantity}, current restock_threshold={self.restock_threshold})"
 
-    def filters(self) -> dict[str, Any]:
-        return {
-            "book_id": self.book.book_id,
-            "quantity_available": self.quantity,
-            "restock_threshold": self.restock_threshold,
-        }
-
     @property
-    def restock_threshold(self) -> int:
-        return self._restock_threshold
-
-    @property
-    def quantity(self) -> int:
-        return self._quantity
-
-    @quantity.setter
-    def quantity(self, new_quantity: int) -> None:
-        self._quantity = new_quantity
+    def inventory_id(self) -> int | None:
+        return self._inventory_id
 
     def add_stock(self, amount: int = 1) -> None:
-        self._quantity += amount
+        self.quantity += amount
 
     def remove_stock(self, amount: int = 1) -> None:
-        if amount > self._quantity:
+        if amount > self.quantity:
             raise ValueError("Not enough stock to remove")
-        self._quantity -= amount
+        if amount <= 0:
+            raise ValueError("Amount must be greater than 0")
+        self.quantity -= amount
 
-    @property
     def availability(self) -> bool:
-        return self._quantity > 0
+        return self.quantity > 0
 
     def needs_restock(self) -> bool:
-        return self._quantity < self._restock_threshold
+        return self.quantity < self.restock_threshold
 
     @classmethod
-    def from_db_rows(cls, row: dict[str, Any]) -> "Inventory":
-        book = Book.from_db_rows(row)
+    def from_db_row(cls, row: dict[str, Any], book: Book) -> "Inventory":
+        book = Book.from_db_row(row)
         return cls(
             book=book,
             quantity=row.get("quantity_available", 0),
             restock_threshold=row.get("restock_threshold", 2),
             inventory_id=row.get("inventory_id"),
         )
-
-    def custom_repr(self) -> str:
-        return (
-            f"Inventory(book={self.book}), "
-            f"Quantity={self.quantity}, "
-            f"restock_threshold={self.restock_threshold})"
-        )
-
-    """
-    example use case of the above
-
-        row = {
-        "book_id": 1,
-        "quantity": "2",
-        "restock_threshold": False
-    }
-
-    inventory = Inventory.from_db_rows(row)
-    print(inventory) 
-"""

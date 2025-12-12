@@ -24,7 +24,7 @@ class UserNotFoundError(ServiceError):
     pass
 
 
-class InvalidUserData(ServiceError):
+class InvalidEmailError(ServiceError):
     pass
 
 

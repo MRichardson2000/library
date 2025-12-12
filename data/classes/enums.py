@@ -6,3 +6,9 @@ class LoanStatus(Enum):
     BORROWED = "Borrowed"
     RETURNED = "Returned"
     OVERDUE = "Overdue"
+
+
+class AccountState(Enum):
+    ACTIVE = "Active"
+    DELETED = "Deleted"
+    SUSPENDED = "Suspended"
