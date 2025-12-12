@@ -1,14 +1,13 @@
 from __future__ import annotations
 from data.database.query import FIND_BY_FIRST_NAME
+from data.classes.enums import AccountState
 from data.database.dbconn import execute_query, fetch_result
 from data.database.sql_models import users_insert
 from data.classes.user import User
 from src.services.exceptions import (
-    UserAlreadyExistsError,
     DatabaseServiceError,
     UserNotFoundError,
 )
-import logging
 from typing import Any
 
 
@@ -69,12 +68,13 @@ class UserServices:
                 raise UserNotFoundError()
             self.user.last_name = new_surname
             user_id = row[0]
+
             execute_query(
                 "update users set last_name = :last_name where first_name = :first_name and user_id = :user_id",
                 {
                     "last_name": self.user.last_name,
                     "first_name": self.user.first_name,
-                    "user_id": self.user._user_id,
+                    "user_id": user_id,
                 },
             )
         except Exception as e:
@@ -92,44 +92,22 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info(
-            "Attempting to update Email address for user %s %s",
-            self.user.first_name,
-            self.user.last_name,
-        )
-        conditions, values = self.filters.build_conditions(
-            {"user_id": self.user.user_id}
-        )
-        find_user_query = f"select * from users where {conditions}"
         try:
-            user_check = self.executor.execute(find_user_query, values)
-            if not user_check:
-                usr_msg = "Unable to find userd"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            if len(user_check) > 1:
-                mulrow_msg = "Modification aborted due to multiple rows being detected"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
-            update_query = f"""
-                            update users
-                            set email_address = :new_email
-                            where {conditions}
-                            returning user_id;
-                            """
-            values["new_email"] = new_email_address
-            rows = self.executor.execute(update_query, values)
-            if not rows or "user_id" not in rows[0]:
-                id_msg = "User ID not found"
-                logging.warning(id_msg)
-                raise DatabaseServiceError(id_msg)
-            self.user.user_id = rows[0]["user_id"]
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
             self.user.email_address = new_email_address
-            logging.info("Updated email address in the database successfully")
+            user_id = row[0]
+            execute_query(
+                "update users set email_address = :email_address where first_name = :first_name and user_id = :user_id",
+                {
+                    "email_address": self.user.email_address,
+                    "first_name": self.user.first_name,
+                    "user_id": user_id,
+                },
+            )
         except Exception as e:
-            fail_msg = "Failed to change email address"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError("Failed to change email") from e
 
     def phone_number_change(self, new_phone_number: str) -> None:
         """
@@ -143,32 +121,22 @@ class UserServices:
             ValueError: If multiple matches exist.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to update phone number")
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        find_user_query = f"select * from users where {conditions}"
-        self.user.phone_number = new_phone_number
         try:
-            rows = self.executor.execute(find_user_query, values)
-            if not rows:
-                usr_msg = "Unable to find user"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            if len(rows) > 1:
-                mulrow_msg = "Modification aborted due to multiple rows being detected"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
-            update_query = f"""
-                            update user
-                            set phone_number = :phone_number
-                            where {conditions}
-                            """
-            values["last_name"] = self.user.last_name
-            self.executor.execute(update_query, values)
-            logging.info("Updated phone number successfully")
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            self.user.phone_number = new_phone_number
+            user_id = row[0]
+            execute_query(
+                "update users set phone_number = :phone_number where first_name = :first_name and user_id = :user_id",
+                {
+                    "phone_number": self.user.phone_number,
+                    "first_name": self.user.first_name,
+                    "user_id": user_id,
+                },
+            )
         except Exception as e:
-            fail_msg = "Failed to change phone number"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError("Failed to change phone_number") from e
 
     def delete_user(self) -> None:
         """
@@ -178,30 +146,24 @@ class UserServices:
             UserNotFoundError: If the user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info("Attempting to Mark user as deleted in the database")
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        verification_query = f"select * from users where {conditions}"
         try:
-            rows = self.executor.execute(verification_query, values)
-            if not rows:
-                usr_msg = "User not found"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            if len(rows) > 1:
-                mulrow_msg = "Deletion aborted due to multiple rows being found"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
-            delete_query = f"""
-                            update user
-                            set deleted = True
-                            where {conditions}
-                            """
-            self.executor.execute(delete_query, values)
-            logging.info("Marked user as deleted in the database successfully")
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            self.user.account_state = AccountState.DELETED
+            user_id = row[0]
+            execute_query(
+                "update users set account_state = :account_state where first_name = :first_name and user_id = :user_id",
+                {
+                    "account_state": self.user.account_state,
+                    "first_name": self.user.first_name,
+                    "user_id": user_id,
+                },
+            )
         except Exception as e:
-            fail_msg = "Failed to delete user"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError(
+                "Failed to change account_state to deleted"
+            ) from e
 
     def restore_user(self) -> None:
         """
@@ -211,32 +173,21 @@ class UserServices:
             UserNotFoundError: If user is not found.
             DatabaseServiceError: If a database operation fails.
         """
-        logging.info(
-            "Attempting to restore user: %s %s",
-            self.user.first_name,
-            self.user.last_name,
-        )
-        conditions, values = self.filters.build_conditions(self.user.filters())
-        query = f"select * from users where {conditions}"
         try:
-            user_check = self.executor.execute(query, values)
-            if not user_check:
-                usr_msg = "User not found in the database"
-                logging.warning(usr_msg)
-                raise UserNotFoundError(usr_msg)
-            if len(user_check) > 1:
-                mulrow_msg = "Modification aborted due to multiple rows being found"
-                logging.warning(mulrow_msg)
-                raise ValueError(mulrow_msg)
-            update_query = f"""
-                            updater user
-                            set deleted = False
-                            where {conditions}
-                            """
-            values["deleted"] = self.user.deleted
-            self.executor.execute(update_query, values)
-            logging.info("User restored successfully")
+            row = fetch_result(FIND_BY_FIRST_NAME, {"first_name": self.user.first_name})
+            if not row:
+                raise UserNotFoundError()
+            self.user.account_state = AccountState.ACTIVE
+            user_id = row[0]
+            execute_query(
+                "update users set account_state = :account_state where first_name = :first_name and user_id = :user_id",
+                {
+                    "account_state": self.user.account_state,
+                    "first_name": self.user.first_name,
+                    "user_id": user_id,
+                },
+            )
         except Exception as e:
-            fail_msg = "failed to restore user"
-            logging.exception(fail_msg)
-            raise DatabaseServiceError(fail_msg) from e
+            raise DatabaseServiceError(
+                "Failed to change account_state to active"
+            ) from e

@@ -23,6 +23,10 @@ class User:
     def __repr__(self) -> str:
         return f"User(id={self._user_id}, name={self.first_name} {self.last_name}, email={self.email_address}, phone number={self.phone_number}, account state={self.account_state})"
 
+    @property
+    def user_id(self) -> int | None:
+        return self._user_id
+
     def update_email_address(self, new_email: str) -> None:
         if "@" not in new_email:
             raise InvalidEmailError("Email address must contain the @ symbol")
