@@ -9,10 +9,8 @@ from data.database.sql_models import (
 from src.services.exceptions import DatabaseServiceError
 import os
 import sqlalchemy as sa
-from sqlalchemy.engine import Engine, RowMapping
-from sqlalchemy.exc import ResourceClosedError
 import logging
-from typing import Optional, Any, Union, Sequence
+from typing import Any
 
 
 def load_env(testing: bool = False) -> DB:
@@ -33,7 +31,8 @@ def load_env(testing: bool = False) -> DB:
     return db_details
 
 
-def get_engine(db_details: DB) -> sa.Engine:
+def get_engine(db_details: DB | None = None) -> sa.Engine:
+    db_details = db_details or load_env()
     url = (
         f"postgresql://{db_details.db_user}:{db_details.db_password}"
         f"@{db_details.db_host}:{db_details.db_port}/{db_details.db_name}"
@@ -41,50 +40,32 @@ def get_engine(db_details: DB) -> sa.Engine:
     return sa.create_engine(url, echo=False, future=True)
 
 
-def create_schema(
-    db_details: DB, query: str, params: Optional[dict[str, Any]] = None
-) -> None:
-    engine = get_engine(db_details)
-    with engine.connect() as conn:
-        trans = conn.begin()
-        try:
-            conn.execute(sa.text(query), params or {})
-            trans.commit()
-        except Exception as e:
-            trans.rollback()
-            raise DatabaseServiceError("Create schema failed") from e
-
-
-def execute_query(
-    query: str,
-    params: Optional[Union[Sequence[Any], dict[str, Any]]] = None,
-    db_details: Optional[DB] = None,
+def fetch_result(
+    query: str, params: dict[str, Any] | None = None
 ) -> list[dict[str, Any]]:
-    if db_details is None:
-        db_details = load_env()
-    engine: Engine = get_engine(db_details)
-    with engine.connect() as conn:
-        trans = conn.begin()
-        try:
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
             result = conn.execute(sa.text(query), params or {})
-            rows: Sequence[RowMapping] = []
-            try:
-                rows = result.mappings().all()
-            except ResourceClosedError:
-                rows = []
-            trans.commit()
-            return [dict(r) for r in rows]
-        except Exception as e:
-            trans.rollback()
-            raise DatabaseServiceError("Execute query failed") from e
+            return [dict(r) for r in result.mappings()]
+    except Exception as e:
+        raise DatabaseServiceError("Fetch results failed") from e
+
+
+def execute_query(query: str, params: dict[str, Any] | None = None) -> None:
+    engine = get_engine()
+    try:
+        with engine.begin() as conn:
+            conn.execute(sa.text(query), params or {})
+    except Exception as e:
+        raise DatabaseServiceError("Execute query failed") from e
 
 
 def create_schemas() -> None:
-    db_details = load_env()
-    create_schema(db_details, users_table)
-    create_schema(db_details, book_table)
-    create_schema(db_details, loan_table)
-    create_schema(db_details, inventory_table)
+    execute_query(users_table)
+    execute_query(book_table)
+    execute_query(loan_table)
+    execute_query(inventory_table)
 
 
 def main() -> None:

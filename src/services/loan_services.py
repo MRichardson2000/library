@@ -295,34 +295,34 @@ class LoanServices:
             raise DatabaseServiceError(err_msg)
         return True
 
-    # def retrieve_due_date(self) -> datetime:
-    #     """
-    #     Docstring for retrieve_due_date
-    #     """
-    #     logging.info("Attempting to receive due date for book: %s loaned by: %s %s", self.book.title, self.user.first_name, self.user.last_name)
-    #     book_conditions, book_values = self.filters.build_conditions(self.book.filters())
-    #     try:
-    #         book_query = f"select * from book where {book_conditions}"
-    #         book_check = self.executor.execute(book_query, book_values)
-    #         if not book_check:
-    #             book_err = "Book not found in the database, unable to retrieve due date"
-    #             logging.warning(book_err)
-    #             raise LoanNotFoundError(book_err)
-    #         book_id = book_check[0]["book_id"]
-    #         query = (
-    #             f"""
-    #             select *
-    #             from loan
-    #             where book_id = :book_id
-    #             and status = 'Borrowed'
-    #             and return date is null
-    #             """,
-    #             book_id
-    #         )
-    #         book_vals = {"book_id": book_id}
-    #         loan_check_query = self.executor.execute(query)
-    #         if not loan_check_query:
-    #             loan_err = "Book is not currently loaned, unable to retrieve due date"
-    #             logging.warning(loan_err)
-    #             raise LoanNotFoundError(loan_err)
-    #         due_date = loan_check_query[0]["due_date"]
+    def retrieve_due_date(self) -> datetime:
+        """
+        Docstring for retrieve_due_date
+        """
+        logging.info("Attempting to receive due date for book: %s loaned by: %s %s", self.book.title, self.user.first_name, self.user.last_name)
+        book_conditions, book_values = self.filters.build_conditions(self.book.filters())
+        try:
+            book_query = f"select * from book where {book_conditions}"
+            book_check = self.executor.execute(book_query, book_values)
+            if not book_check:
+                book_err = "Book not found in the database, unable to retrieve due date"
+                logging.warning(book_err)
+                raise LoanNotFoundError(book_err)
+            book_id = book_check[0]["book_id"]
+            query = (
+                f"""
+                select *
+                from loan
+                where book_id = :book_id
+                and status = 'Borrowed'
+                and return date is null
+                """,
+                book_id
+            )
+            book_vals = {"book_id": book_id}
+            loan_check_query = self.executor.execute(query)
+            if not loan_check_query:
+                loan_err = "Book is not currently loaned, unable to retrieve due date"
+                logging.warning(loan_err)
+                raise LoanNotFoundError(loan_err)
+            due_date = loan_check_query[0]["due_date"]
