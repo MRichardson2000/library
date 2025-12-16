@@ -9,9 +9,6 @@ from data.classes.user import User
 from data.classes.inventory import Inventory
 from data.classes.loan import Loan
 from src.services.exceptions import (
-    LoanLimitExceededError,
-    LoanNotFoundError,
-    LoanOverdueError,
     BookNotFoundError,
     DatabaseServiceError,
 )
@@ -30,7 +27,6 @@ class LoanServices:
         self.loan = loan
         self.inventory = inventory
         self.book = book
-
 
     def start_loan_transaction(self) -> None:
         """
@@ -61,7 +57,6 @@ class LoanServices:
             execute_query(loan_insert, self.book.to_dict())
         except Exception as e:
             raise DatabaseServiceError("Failed to start loan transaction") from e
-        
 
     def end_loan_transaction(self) -> None:
         """
@@ -71,189 +66,61 @@ class LoanServices:
         """
         self.loan.return_book()
         try:
-            loan_row = fetch_result()
-
+            loan_row = fetch_result(FIND_BY_TITLE, {"title": self.book.title})
+            if not loan_row:
+                raise BookNotFoundError()
+            if len(loan_row) > 1:
+                raise ValueError(
+                    "Unable to end loan transaction, multiple rows detected"
+                )
+            execute_query("update loan set ")  # finish later
+        except Exception as e:
+            raise DatabaseServiceError("Failed to end loan transaction") from e
 
     def loaned_books(self) -> list[dict[str, Any]] | None:
-        """
-        Attempts to retrieve books on loan for a user
-
-        Raises database service error for database interaction errors
-        """
-        logging.info(
-            "Attempting to retrieve the books on loan for user: %s",
-            self.user.first_name,
-        )
-        query = """
-                select u.first_name,
-                       u.last_name,
-                       b.title,
-                       l.loan_time,
-                       l.due_date
-                from loan l
-                left join users u on l.user_id = u.user_id
-                left join book b on b.book_id = u.user_id
-                where l.user_id = :user_id
-                    and l.status = 'Borrowed'
-                    and l.return_date is null
-                """
+        query = ""  # finish later
         try:
-            book_list = self.executor.execute(query)
-            if book_list:
-                logging.info(
-                    "Successfully retrieved books on loan for %s", self.user.first_name
-                )
-                return book_list
+            fetch_result(query)
         except Exception as e:
-            err_msg = "Failed to retrieve books on loan for %s", self.user.first_name
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            raise DatabaseServiceError(
+                "Failed to retrieve books on loan for user"
+            ) from e
 
     def extend_loan(self) -> None:
-        """
-        Attemps to extend the book on loan by 30 days. The days can be adjusted if needed
-
-        Raises:
-            BookNotFoundError if no book is found
-            LoanNotFoundError if no loan is found
-            DatabaseServiceError for any database related errors
-        """
-        logging.info(
-            "Attempting to extend loan time for book: %s for user: %s %s",
-            self.book.title,
-            self.user.first_name,
-            self.user.last_name,
-        )
-        book_conditions, book_values = self.filters.build_conditions(
-            self.book.filters()
-        )
+        self.extend_loan()
         try:
-            book_query = f"select * from book where {book_conditions}"
-            book_check = self.executor.execute(book_query, book_values)
-            if not book_check:
-                not_found_msg = "Book not found in the database. Please speak with the admins to register the book. Not eligible for extension until this is done!"
-                logging.warning(not_found_msg)
-                raise BookNotFoundError(not_found_msg)
-            book_id = book_check[0]["book_id"]
-            loan_check_query = (
-                f"""
-                select *
-                from loan
-                where book_id = :book_id
-                and status = 'Borrowed'
-                and return_date is null
-                """,
-                book_id,
+            execute_query(
+                "update loan set due_date = :due_date", {"due_date": self.loan.due_date}
             )
-            if not loan_check_query:
-                loan_msg = (
-                    "%s is currently not loaned by anyone, unable to extend the loan",
-                    self.book.title,
-                )
-                logging.warning(loan_msg)
-                raise LoanNotFoundError(loan_msg)
-            self.loan.extend_loan(30)
-            update_query = """
-                            update loan
-                            set due_date = :due_date
-                            where book_id = :book_id
-                            and status = 'Borrowed'
-                            """
-            update_values: dict[str, Any] = {
-                "book_id": self.book.book_id,
-                "due_date": self.loan.due_date,
-            }
-            self.executor.execute(update_query, update_values)
-            logging.info("The loan has been extended by 30 days")
         except Exception as e:
-            err_msg = (
-                "Unable to extend loan for book: %s for user: %s %s",
-                self.book.title,
-                self.user.first_name,
-                self.user.last_name,
-            )
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg) from e
+            raise DatabaseServiceError("Failed to extend loan") from e
 
     def verify_loan_permissions(self) -> bool:
         """
-        Check if the user has any constraints which restricts them from loaning another book.
-        current constraints:
-            5 books loaned
-            any late books
-            overdue fees - implement later
-
-        Raises:
+        requirements 5 books max, no late fees due, no late return books
         """
-        logging.info(
-            "Checking to see if %s %s is permitted to loan %s",
-            self.user.first_name,
-            self.user.last_name,
-            self.book.title,
-        )
-        get_loaned_books = """
-                            select u.user_id, b.book_id, b.title
-                            from loan l
-                            left join book b on l.book_id = b.book_id
-                            left join users u on l.user_id = u.user_id
-                            where l.status = 'Borrowed'
-                                and u.user_id = :user_id
-                            """
+        max_books = ""  # fill in later
+        books_returned_late = ""  # fill in later
+        late_fees = ""  # fill in later
         try:
-            rows = self.executor.execute(get_loaned_books)
-            if rows and len(rows) == 5:
-                limit_error = "5 book loan limit reached, please return a book before trying to loan another"
-                logging.warning(limit_error)
-                raise LoanLimitExceededError(limit_error)
-            get_overdue_books = """
-                                select u.user_id,
-                                       b.book_id,
-                                       b.title,
-                                left join b on l.book_id = b.book_id
-                                left join users u on l.user_id = u.user_id
-                                where l.status = 'Returned'
-                                    and u.user_id = :user_id
-                                    and late_return = True
-                                """
-            overdue_rows = self.executor.execute(get_overdue_books)
-            if overdue_rows:
-                overdue_msg = "You have books that are late to be returned, please return these and pay the late fee before loaning more books"
-                logging.warning(overdue_msg)
-                raise LoanOverdueError(overdue_msg)
+            books = fetch_result(max_books)
+            if not books[0]:
+                late_returns = fetch_result(books_returned_late)
+                if not late_returns:
+                    late_fees = fetch_result(late_fees)
+                    if not late_fees:
+                        return True
         except Exception as e:
-            err_msg = "Failed to verify loan permissions"
-            logging.exception(err_msg)
-            raise DatabaseServiceError(err_msg)
-        return True
+            raise DatabaseServiceError("Failed to verify loan permissions") from e
+        return False
 
-    def retrieve_due_date(self) -> datetime:
-        """
-        Docstring for retrieve_due_date
-        """
-        logging.info("Attempting to receive due date for book: %s loaned by: %s %s", self.book.title, self.user.first_name, self.user.last_name)
-        book_conditions, book_values = self.filters.build_conditions(self.book.filters())
+    def retrieve_due_date(self) -> datetime | None:
         try:
-            book_query = f"select * from book where {book_conditions}"
-            book_check = self.executor.execute(book_query, book_values)
-            if not book_check:
-                book_err = "Book not found in the database, unable to retrieve due date"
-                logging.warning(book_err)
-                raise LoanNotFoundError(book_err)
-            book_id = book_check[0]["book_id"]
-            query = (
-                f"""
-                select *
-                from loan
-                where book_id = :book_id
-                and status = 'Borrowed'
-                and return date is null
-                """,
-                book_id
+            due_date = fetch_result(
+                "select * from loan where book_id = :book_id and status = 'Borrowed'",
+                {"title": self.book.title},
             )
-            book_vals = {"book_id": book_id}
-            loan_check_query = self.executor.execute(query)
-            if not loan_check_query:
-                loan_err = "Book is not currently loaned, unable to retrieve due date"
-                logging.warning(loan_err)
-                raise LoanNotFoundError(loan_err)
-            due_date = loan_check_query[0]["due_date"]
+            if len(due_date) == 1:
+                return due_date[0]["due_date"]
+        except Exception as e:
+            raise DatabaseServiceError("Failed to retrieve due_date") from e

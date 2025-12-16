@@ -39,7 +39,7 @@ class Loan:
         self.status = LoanStatus.RETURNED
         self.inventory.add_stock(1)
 
-    def extend_loan(self, extra_days: int) -> None:
+    def extend_loan(self, extra_days: int = 30) -> None:
         if extra_days <= 0:
             raise ValueError("Extension must be positive")
         if extra_days > 30:
