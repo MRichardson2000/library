@@ -96,9 +96,6 @@ class LoanServices:
             raise DatabaseServiceError("Failed to extend loan") from e
 
     def verify_loan_permissions(self) -> bool:
-        """
-        requirements 5 books max, no late fees due, no late return books
-        """
         max_books = ""  # fill in later
         books_returned_late = ""  # fill in later
         late_fees = ""  # fill in later

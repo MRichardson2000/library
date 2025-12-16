@@ -2,8 +2,7 @@ from data.classes.book import Book
 
 
 def testing_repr() -> Book:
-    """Just figuring out how it works exactly - I can't actually remember if Michael wrote this book lol but anywho"""
-    b = Book(1, "War Horse", "Michael Morpurgo", "history", 5)
+    b = Book("test", "test", "test", 0.0)
     return b
 
 
