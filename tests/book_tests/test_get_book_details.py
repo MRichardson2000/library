@@ -5,7 +5,7 @@ from tests.auto_clear_db import auto_clear_book_table
 from tests.auto_create_book import auto_create_book
 
 
-def test_add_book(book: Book) -> None:
+def test_get_book_details(book: Book) -> None:
     auto_clear_book_table()
     auto_create_book()
     output = fetch_result("select * from book where title = 'test'")

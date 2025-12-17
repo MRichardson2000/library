@@ -41,7 +41,7 @@ class LoanServices:
         except Exception as e:
             raise DatabaseServiceError("Failed to end loan transaction") from e
 
-    def loaned_books(self) -> list[dict[str, Any]] | None:
+    def get_loaned_books(self) -> list[dict[str, Any]] | None:
         try:
             self.loan_queries.get_books_on_loan(self.user)
         except Exception as e:
@@ -64,7 +64,7 @@ class LoanServices:
             raise DatabaseServiceError("Failed to verify loan permissions") from e
         return False
 
-    def retrieve_due_date(self) -> datetime | None:
+    def get_due_date(self) -> datetime | None:
         try:
             self.loan_queries.due_date_retrieval(self.book)
         except Exception as e:
