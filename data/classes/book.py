@@ -22,6 +22,10 @@ class Book:
     def __repr__(self) -> str:
         return f"Book: {self.title} by {self.author} Genre: {self.genre} Rating: {self.rating}."
 
+    @property
+    def book_id(self) -> int | None:
+        return self._book_id
+
     @classmethod
     def from_db_row(cls, row: dict[str, Any]) -> "Book":
         return cls(
