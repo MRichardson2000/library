@@ -15,15 +15,13 @@ class UserServices:
 
     def create_user(self) -> None:
         try:
-            row = self.user_queries.find_by_first_name()
-            if not row:
-                self.user_queries.insert_user()
+            self.user_queries.insert_user(self.user)
         except Exception as e:
             raise DatabaseServiceError("Failed to create user") from e
 
     def get_user_details(self) -> dict[str, Any] | None:
         try:
-            rows = self.user_queries.find_by_first_name()
+            rows = self.user_queries.find_by_first_name(self.user)
             if rows:
                 return rows[0]
         except Exception as e:
@@ -32,28 +30,28 @@ class UserServices:
     def change_surname(self, new_surname: str) -> None:
         self.user.last_name = new_surname
         try:
-            self.user_queries.set_surname()
+            self.user_queries.set_surname(self.user)
         except Exception as e:
             raise DatabaseServiceError("Failed to change surname") from e
 
     def email_change(self, new_email_address: str) -> None:
         self.user.email_address = new_email_address
         try:
-            self.user_queries.set_email()
+            self.user_queries.set_email(self.user)
         except Exception as e:
             raise DatabaseServiceError("Failed to change email") from e
 
     def phone_number_change(self, new_phone_number: str) -> None:
         self.user.phone_number = new_phone_number
         try:
-            self.user_queries.set_phone_number()
+            self.user_queries.set_phone_number(self.user)
         except Exception as e:
             raise DatabaseServiceError("Failed to change phone_number") from e
 
     def delete_user(self) -> None:
         self.user.account_state = AccountState.DELETED
         try:
-            self.user_queries.set_status()
+            self.user_queries.set_status(self.user)
         except Exception as e:
             raise DatabaseServiceError(
                 "Failed to change account_state to deleted"
@@ -62,7 +60,7 @@ class UserServices:
     def restore_user(self) -> None:
         self.user.account_state = AccountState.ACTIVE
         try:
-            self.user_queries.set_status()
+            self.user_queries.set_status(self.user)
         except Exception as e:
             raise DatabaseServiceError(
                 "Failed to change account_state to active"

@@ -30,20 +30,20 @@ class LoanServices:
     def start_loan_transaction(self) -> None:
         self.loan.borrow_book()
         try:
-            self.loan_queries.insert_loan()
+            self.loan_queries.insert_loan(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to start loan transaction") from e
 
     def end_loan_transaction(self) -> None:
         self.loan.return_book()
         try:
-            self.loan_queries.end_loan()
+            self.loan_queries.end_loan(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to end loan transaction") from e
 
     def loaned_books(self) -> list[dict[str, Any]] | None:
         try:
-            self.loan_queries.get_books_on_loan()
+            self.loan_queries.get_books_on_loan(self.user)
         except Exception as e:
             raise DatabaseServiceError(
                 "Failed to retrieve books on loan for user"
@@ -52,20 +52,20 @@ class LoanServices:
     def extend_loan_transaction(self) -> None:
         self.loan.extend_loan()
         try:
-            self.loan_queries.loan_extension()
+            self.loan_queries.loan_extension(self.loan)
         except Exception as e:
             raise DatabaseServiceError("Failed to extend loan") from e
 
     def verify_loan_permissions(self) -> bool:
         """all verification stats can be created and then added to the verification module"""
         try:
-            self.loan_queries.verification()
+            self.loan_queries.verification(self.user)
         except Exception as e:
             raise DatabaseServiceError("Failed to verify loan permissions") from e
         return False
 
     def retrieve_due_date(self) -> datetime | None:
         try:
-            self.loan_queries.due_date_retrieval()
+            self.loan_queries.due_date_retrieval(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to retrieve due_date") from e

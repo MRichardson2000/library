@@ -17,14 +17,14 @@ class BookServices:
     def create_book(self) -> None:
         logging.info("Attempting to create book: %s", self.book.title)
         try:
-            self.book_queries.insert_book()
+            self.book_queries.insert_book(self.book)
         except Exception as e:
             logging.exception("Failed to create book")
             raise DatabaseServiceError("Failed to create book") from e
 
     def get_book_details(self) -> list[dict[str, Any]] | None:
         try:
-            rows = self.book_queries.find_by_title()
+            rows = self.book_queries.find_by_title(self.book)
             return rows
         except Exception as e:
             raise DatabaseServiceError("Failed to get book details") from e
@@ -32,20 +32,20 @@ class BookServices:
     def delete_book(self) -> None:
         self.book.status = BookState.DELETED
         try:
-            self.book_queries.update_book_status()
+            self.book_queries.update_book_status(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to mark book as deleted") from e
 
     def restore_book(self) -> None:
         self.book.status = BookState.AVAILABLE
         try:
-            self.book_queries.update_book_status()
+            self.book_queries.update_book_status(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to mark book as restored") from e
 
     def set_rating(self, new_rating: int) -> None:
         self.book.rating = new_rating
         try:
-            self.book_queries.update_rating()
+            self.book_queries.update_rating(self.book)
         except Exception as e:
             raise DatabaseServiceError("Failed to update book rating") from e

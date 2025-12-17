@@ -3,8 +3,8 @@ from data.dataclasses.db_dataclass import DB
 
 
 def auto_clear_book_table(db: DB = load_env(testing=True)) -> None:
-    execute_query("TRUNCATE book RESTART IDENTITY CASCADE;", db_details=db)
+    execute_query("TRUNCATE book RESTART IDENTITY CASCADE;")
 
 
 def auto_clear_user_table(db: DB = load_env(testing=True)) -> None:
-    execute_query("TRUNCATE users RESTART IDENTITY CASCADE;", db_details=db)
+    execute_query("TRUNCATE users RESTART IDENTITY CASCADE;")

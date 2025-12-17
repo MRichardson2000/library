@@ -1,32 +1,38 @@
-from data.database.queries.base_queries import Queries
+from data.classes.book import Book
 from data.database.sql_models import book_insert
+from data.dataclasses.db_dataclass import DB
 from data.database.dbconn import fetch_result, execute_query
 from typing import Any
 
 
-class BookQueries(Queries):
-    def find_by_title(self) -> list[dict[str, Any]] | None:
+class BookQueries:
+    def __init__(self, db_session: DB) -> None:
+        self.db_session = db_session
+
+    def find_by_title(self, book: Book) -> list[dict[str, Any]] | None:
         rows = fetch_result(
-            "select * from book where title = :title", {"title": self.book.title}
+            "select * from book where title = :title", {"title": book.title}
         )
         if rows:
             return rows
 
-    def update_book_status(self) -> None:
-        rows = self.find_by_title()
+    def update_book_status(self, book: Book) -> None:
+        rows = self.find_by_title(book)
         if rows and len(rows) == 1:
             execute_query(
-                "update book set status = :status", {"status": self.book.status}
+                "update book set status = :status where title = :title",
+                {"status": book.status, "title": book.title},
             )
 
-    def update_rating(self) -> None:
-        rows = self.find_by_title()
+    def update_rating(self, book: Book) -> None:
+        rows = self.find_by_title(book)
         if rows and len(rows) == 1:
             execute_query(
-                "update book set rating = :rating", {"rating": self.book.rating}
+                "update book set rating = :rating where title = :title",
+                {"rating": book.rating, "title": book.title},
             )
 
-    def insert_book(self) -> None:
-        rows = self.find_by_title()
+    def insert_book(self, book: Book) -> None:
+        rows = self.find_by_title(book)
         if not rows:
-            execute_query(book_insert, self.book.to_dict())
+            execute_query(book_insert, book.to_dict())

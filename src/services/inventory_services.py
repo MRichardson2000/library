@@ -24,7 +24,7 @@ class InventoryServices:
 
     def get_quantity(self) -> int | None:
         try:
-            return self.inventory_queries.get_inventory_quantity()
+            return self.inventory_queries.get_inventory_quantity(self.book)
         except Exception as e:
             raise DatabaseServiceError(
                 "Failed to retrieve quantity in inventory"
@@ -32,13 +32,13 @@ class InventoryServices:
 
     def get_availability(self) -> bool:
         try:
-            return self.inventory_queries.get_inventory_availability()
+            return self.inventory_queries.get_inventory_availability(self.book)
         except Exception as e:
             raise DatabaseServiceError("Unable to retrieve availability") from e
 
     def update_quantity(self) -> None:
         self.inventory.add_stock()
         try:
-            self.inventory_queries.update_inventory_quantity()
+            self.inventory_queries.update_inventory_quantity(self.book, self.inventory)
         except Exception as e:
             raise DatabaseServiceError("Failed to update quantity") from e
