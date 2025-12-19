@@ -2,10 +2,9 @@ from data.classes.user import User
 from data.database.queries.user_queries import UserQueries
 from src.services.user_services import UserServices
 from data.dataclasses.db_dataclass import DB
-from data.database.dbconn import load_env
 
 
-def auto_create_user(db_session: DB = load_env(testing=True)) -> User:
+def auto_create_user(db_session: DB) -> User:
     user = User(
         first_name="user",
         last_name="user",

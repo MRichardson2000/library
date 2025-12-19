@@ -9,18 +9,40 @@ class UserQueries:
         self.db_session = db_session
 
     def find_user(self, email_address: str) -> User | None:
+        """
+        Retrieves a user from the database by email address.
+
+        Args:
+            email_address: The email address to search for.
+
+        Returns:
+            A User object if found, None otherwise.
+        """
         rows = fetch_result(
             "select * from user where email_address = :email_address",
             {"email_address": email_address},
+            db_details=self.db_session,
         )
         return User.from_db_row(rows[0]) if rows else None
 
     def insert_user(self, user: User) -> None:
+        """
+        Inserts a new user into the database if not already present.
+
+        Args:
+            user: The User object to insert.
+        """
         row = self.find_user(user.email_address)
         if not row:
-            execute_query(users_insert, user.to_dict())
+            execute_query(users_insert, user.to_dict(), db_details=self.db_session)
 
     def set_surname(self, user: User) -> None:
+        """
+        Updates the surname of an existing user.
+
+        Args:
+            user: The User object with updated surname.
+        """
         row = self.find_user(user.email_address)
         if row:
             execute_query(
@@ -31,9 +53,16 @@ class UserQueries:
                 and user_id = :user_id
                 """,
                 {"last_name": self},
+                db_details=self.db_session,
             )
 
     def set_email(self, user: User) -> None:
+        """
+        Updates the email address of an existing user.
+
+        Args:
+            user: The User object with updated email address.
+        """
         row = self.find_user(user.email_address)
         if row:
             execute_query(
@@ -48,9 +77,16 @@ class UserQueries:
                     "first_name": user.first_name,
                     "user_id": user.user_id,
                 },
+                db_details=self.db_session,
             )
 
     def set_phone_number(self, user: User) -> None:
+        """
+        Updates the phone number of an existing user.
+
+        Args:
+            user: The User object with updated phone number.
+        """
         row = self.find_user(user.email_address)
         if row:
             execute_query(
@@ -65,9 +101,16 @@ class UserQueries:
                     "first_name": user.first_name,
                     "user_id": user.user_id,
                 },
+                db_details=self.db_session,
             )
 
     def set_status(self, user: User) -> None:
+        """
+        Updates the account status of an existing user.
+
+        Args:
+            user: The User object with updated account status.
+        """
         row = self.find_user(user.email_address)
         if row:
             execute_query(
@@ -82,4 +125,5 @@ class UserQueries:
                     "first_name": user.first_name,
                     "user_id": user.user_id,
                 },
+                db_details=self.db_session,
             )

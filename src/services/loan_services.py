@@ -5,7 +5,6 @@ from data.classes.loan import Loan
 from data.classes.book import Book
 from data.classes.user import User
 from data.classes.inventory import Inventory
-from data.classes.loan import Loan
 from src.services.exceptions import (
     DatabaseServiceError,
 )
@@ -29,6 +28,9 @@ class LoanServices:
         self.book = book
 
     def start_loan_transaction(self) -> None:
+        """
+        Initiates a new loan transaction for the user to borrow a book.
+        """
         logging.info(
             "Attempting to start loan transaction of %s for %s %s",
             self.book.title,
@@ -48,6 +50,9 @@ class LoanServices:
             raise DatabaseServiceError("Failed to start loan transaction") from e
 
     def end_loan_transaction(self) -> None:
+        """
+        Terminates an existing loan transaction for the user returning a book.
+        """
         logging.info(
             "Attempting to end loan transaction of %s for %s %s",
             self.book.title,
@@ -63,6 +68,9 @@ class LoanServices:
             raise DatabaseServiceError("Failed to end loan transaction") from e
 
     def get_loaned_books(self) -> list[dict[str, Any]] | None:
+        """
+        Retrieves a list of all books currently on loan for the user.
+        """
         logging.info(
             "Attempting to retrieve the books on loan for %s %s",
             self.user.first_name,
@@ -88,6 +96,9 @@ class LoanServices:
             ) from e
 
     def extend_loan_transaction(self) -> None:
+        """
+        Extends the loan period for a currently borrowed book.
+        """
         logging.info("Attempting to extend loan transaction for %s", self.book.title)
         self.loan.extend_loan()
         try:
@@ -102,7 +113,9 @@ class LoanServices:
             ) from e
 
     def verify_loan_permissions(self) -> bool:
-        """all verification stats can be created and then added to the verification module"""
+        """
+        Verifies that the user has permission to borrow the book.
+        """
         logging.info(
             "Check in progress to verify %s %s has permission to loan %s",
             self.user.first_name,
@@ -122,6 +135,9 @@ class LoanServices:
         return False
 
     def get_due_date(self) -> datetime | None:
+        """
+        Retrieves the due date for a currently borrowed book.
+        """
         logging.info("Attempting to get due date of %s", self.book.title)
         try:
             self.loan_queries.due_date_retrieval(self.book)

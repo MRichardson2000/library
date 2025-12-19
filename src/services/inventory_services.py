@@ -24,6 +24,15 @@ class InventoryServices:
         self.restock_threshold = restock_threshold
 
     def get_quantity(self) -> int | None:
+        """
+        Retrieve the quantity of the book in inventory.
+
+        Returns:
+            int | None: The quantity available, or None if retrieval fails.
+
+        Raises:
+            DatabaseServiceError: If the database query fails.
+        """
         logging.info("Attempting to get quantity of %s", self.book.title)
         try:
             logging.info("Retrieved quantity for %s successfully", self.book.title)
@@ -35,6 +44,15 @@ class InventoryServices:
             ) from e
 
     def get_availability(self) -> bool:
+        """
+        Check if the book is available in inventory.
+
+        Returns:
+            bool: True if the book is available, False otherwise.
+
+        Raises:
+            DatabaseServiceError: If the database query fails.
+        """
         logging.info("Attempting to get availability of %s", self.book.title)
         try:
             logging.info("Successfully retrieved availability for %s", self.book.title)
@@ -44,6 +62,12 @@ class InventoryServices:
             raise DatabaseServiceError("Unable to retrieve availability") from e
 
     def update_quantity(self) -> None:
+        """
+        Update the quantity of the book in inventory.
+
+        Raises:
+            DatabaseServiceError: If the database update fails.
+        """
         logging.info("Attempting to update quantity of %s", self.book.title)
         self.inventory.add_stock()
         try:

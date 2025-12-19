@@ -3,14 +3,14 @@ from data.classes.book import Book
 from src.services.book_services import BookServices
 from data.dataclasses.db_dataclass import DB
 from data.database.queries.book_queries import BookQueries
-from tests.auto_clear_db import auto_clear_book_table
+from tests.auto_clear_db import auto_clear_table
 from tests.auto_create_book import auto_create_book
 from typing import Any
 
 
 def test_update_rating(book: Book, db_session: DB) -> None:
-    auto_clear_book_table()
-    auto_create_book()
+    auto_clear_table("book", db_session)
+    auto_create_book(db_session)
     output_before = fetch_result("select * from book where title = 'test'")
     assert output_before is not None
     row = output_before[0]
@@ -25,4 +25,4 @@ def test_update_rating(book: Book, db_session: DB) -> None:
     assert updated_rows is not None
     updated_row: dict[str, Any] = updated_rows[0]
     assert updated_row["rating"] == book.rating == 5
-    auto_clear_book_table()
+    auto_clear_table("book", db_session)

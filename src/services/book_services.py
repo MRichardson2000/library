@@ -15,6 +15,12 @@ class BookServices:
         self.book_queries = book_queries
 
     def create_book(self) -> None:
+        """
+        Create a new book in the database.
+
+        Raises:
+            DatabaseServiceError: If the book creation fails.
+        """
         logging.info("Attempting to create book: %s", self.book.title)
         try:
             self.book_queries.insert_book(self.book)
@@ -24,6 +30,15 @@ class BookServices:
             raise DatabaseServiceError("Failed to create book") from e
 
     def get_book_details(self) -> list[dict[str, Any]] | None:
+        """
+        Retrieve book details from the database.
+
+        Returns:
+            List of dictionaries containing book details, or None if not found.
+
+        Raises:
+            DatabaseServiceError: If the retrieval fails.
+        """
         logging.info("Attempting to get book details for: %s", self.book.title)
         try:
             logging.info("Successfully retrieved book details for: %s", self.book.title)
@@ -33,6 +48,12 @@ class BookServices:
             raise DatabaseServiceError("Failed to get book details") from e
 
     def delete_book(self) -> None:
+        """
+        Mark a book as deleted in the database.
+
+        Raises:
+            DatabaseServiceError: If the deletion fails.
+        """
         logging.info(
             "Attempting to mark: %s as deleted in the database", self.book.title
         )
@@ -47,6 +68,12 @@ class BookServices:
             raise DatabaseServiceError("Failed to mark book as deleted") from e
 
     def restore_book(self) -> None:
+        """
+        Mark a book as available in the database.
+
+        Raises:
+            DatabaseServiceError: If the restoration fails.
+        """
         logging.info(
             "Attempting to mark: %s as available in the database", self.book.title
         )
@@ -63,6 +90,15 @@ class BookServices:
             ) from e
 
     def set_rating(self, new_rating: int) -> None:
+        """
+        Update the rating of a book.
+
+        Args:
+            new_rating: The new rating value for the book.
+
+        Raises:
+            DatabaseServiceError: If the rating update fails.
+        """
         logging.info("Attempting to update the rating of: %s", self.book.title)
         self.book.rating = new_rating
         try:

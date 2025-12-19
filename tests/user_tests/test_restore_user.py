@@ -2,14 +2,14 @@ from data.classes.user import User
 from data.database.queries.user_queries import UserQueries
 from data.database.dbconn import execute_query
 from data.dataclasses.db_dataclass import DB
-from tests.auto_clear_db import auto_clear_user_table
+from tests.auto_clear_db import auto_clear_table
 from tests.auto_create_user import auto_create_user
 from src.services.user_services import UserServices
 
 
 def test_restore_user(user: User, db_session: DB) -> None:
-    auto_clear_user_table()
-    auto_create_user()
+    auto_clear_table("users", db_session)
+    auto_create_user(db_session)
     output_before = execute_query("select * from users where first_name = 'user'")
     assert output_before is not None
     queries = UserQueries(db_session)
@@ -19,3 +19,4 @@ def test_restore_user(user: User, db_session: DB) -> None:
     output_after = execute_query("select * from users")
     assert output_after is not None
     assert output_after[0]["status"] == "Active"
+    auto_clear_table("users", db_session)

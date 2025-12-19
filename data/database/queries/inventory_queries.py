@@ -9,6 +9,15 @@ class InventoryQueries:
         self.db_session = db_session
 
     def get_inventory_availability(self, book: Book) -> bool:
+        """
+        Check if a book is available in inventory.
+
+        Args:
+            book: The book to check availability for.
+
+        Returns:
+            True if the book is available, False otherwise.
+        """
         rows = fetch_result(
             """
             select i.is_available
@@ -17,6 +26,7 @@ class InventoryQueries:
             where b.title = :title
             """,
             {"title": book.title},
+            db_details=self.db_session,
         )
         if not rows:
             return False
@@ -24,6 +34,15 @@ class InventoryQueries:
         return bool(value)
 
     def get_inventory_quantity(self, book: Book) -> int | None:
+        """
+        Get the available quantity of a book in inventory.
+
+        Args:
+            book: The book to get quantity for.
+
+        Returns:
+            The quantity available or None if not found.
+        """
         rows = fetch_result(
             """
             select i.quantity_available
@@ -32,11 +51,19 @@ class InventoryQueries:
             where b.title = :title
             """,
             {"title": book.title},
+            db_details=self.db_session,
         )
         value = rows[0].get("quantity_available")
         return value
 
     def update_inventory_quantity(self, book: Book, inventory: Inventory) -> None:
+        """
+        Update the available quantity for a book in inventory.
+
+        Args:
+            book: The book to update.
+            inventory: The inventory object containing the new quantity.
+        """
         execute_query(
             """
             update inventory
@@ -47,4 +74,5 @@ class InventoryQueries:
                 "quantity_available": inventory.quantity,
                 "book_id": book.book_id,
             },
+            db_details=self.db_session,
         )

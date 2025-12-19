@@ -41,9 +41,9 @@ def get_engine(db_details: DB | None = None) -> sa.Engine:
 
 
 def fetch_result(
-    query: str, params: dict[str, Any] | None = None
+    query: str, params: dict[str, Any] | None = None, db_details: DB | None = None
 ) -> list[dict[str, Any]]:
-    engine = get_engine()
+    engine = get_engine(db_details)
     try:
         with engine.begin() as conn:
             result = conn.execute(sa.text(query), params or {})
@@ -52,8 +52,10 @@ def fetch_result(
         raise DatabaseServiceError("Fetch results failed") from e
 
 
-def execute_query(query: str, params: dict[str, Any] | None = None) -> None:
-    engine = get_engine()
+def execute_query(
+    query: str, params: dict[str, Any] | None = None, db_details: DB | None = None
+) -> None:
+    engine = get_engine(db_details)
     try:
         with engine.begin() as conn:
             conn.execute(sa.text(query), params or {})
