@@ -5,7 +5,6 @@ from data.classes.user import User
 from src.services.exceptions import (
     DatabaseServiceError,
 )
-from typing import Any
 import logging
 
 
@@ -23,13 +22,13 @@ class UserServices:
             logging.exception("Failed to create user")
             raise DatabaseServiceError("Failed to create user") from e
 
-    def get_user_details(self) -> dict[str, Any] | None:
+    def get_user_details(self) -> User | None:
         logging.info("Attempting to get user details from the database")
         try:
-            rows = self.user_queries.find_by_first_name(self.user)
+            rows = self.user_queries.find_user(self.user.email_address)
             if rows:
                 logging.info("Successfully retrieved user details")
-                return rows[0]
+                return rows
         except Exception as e:
             logging.exception("Failed to get user details from the database")
             raise DatabaseServiceError(

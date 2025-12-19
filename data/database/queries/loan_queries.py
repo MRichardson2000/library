@@ -3,13 +3,13 @@ from data.classes.book import Book
 from data.classes.user import User
 from data.classes.loan import Loan
 from data.dataclasses.db_dataclass import DB
-from data.database.dbconn import fetch_result, execute_query
+from data.database.dbconn import fetch_result, execute_query, load_env
 from datetime import datetime
 from typing import Any
 
 
 class LoanQueries:
-    def __init__(self, db_session: DB) -> None:
+    def __init__(self, db_session: DB = load_env()) -> None:
         self.db_session = db_session
 
     def insert_loan(self, book: Book) -> None:

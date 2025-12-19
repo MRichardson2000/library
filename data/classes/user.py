@@ -1,6 +1,6 @@
 from typing import Any
-from src.services.exceptions import InvalidEmailError
 from data.classes.enums import AccountState
+from src.services.exceptions import InvalidEmailError
 
 
 class User:
@@ -54,3 +54,12 @@ class User:
             "phone_number": self.phone_number,
             "account_state": self.account_state,
         }
+
+    @classmethod
+    def from_csv_row(cls, row: dict[str, str]) -> "User":
+        return cls(
+            first_name=row.get("first_name", ""),
+            last_name=row.get("last_name", ""),
+            email_address=row.get("email_address", ""),
+            phone_number=row.get("phone_number", ""),
+        )

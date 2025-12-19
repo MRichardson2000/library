@@ -46,3 +46,12 @@ class Book:
             "rating": self.rating,
             "status": self.status,
         }
+
+    @classmethod
+    def from_csv_row(cls, row: dict[str, Any]) -> "Book":
+        return cls(
+            title=row.get("title", ""),
+            author=row.get("last_name", ""),
+            genre=row.get("email_address", ""),
+            rating=row.get("rating", ""),
+        )

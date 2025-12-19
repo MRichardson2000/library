@@ -2,28 +2,26 @@ from data.database.sql_models import users_insert
 from data.classes.user import User
 from data.dataclasses.db_dataclass import DB
 from data.database.dbconn import fetch_result, execute_query
-from typing import Any
 
 
 class UserQueries:
     def __init__(self, db_session: DB) -> None:
         self.db_session = db_session
 
-    def find_by_first_name(self, user: User) -> list[dict[str, Any]] | None:
+    def find_user(self, email_address: str) -> User | None:
         rows = fetch_result(
-            "select * from user where first_name = :first_name",
-            {"first_name": user.first_name},
+            "select * from user where email_address = :email_address",
+            {"email_address": email_address},
         )
-        if rows:
-            return rows
+        return User.from_db_row(rows[0]) if rows else None
 
     def insert_user(self, user: User) -> None:
-        row = self.find_by_first_name(user)
+        row = self.find_user(user.email_address)
         if not row:
             execute_query(users_insert, user.to_dict())
 
     def set_surname(self, user: User) -> None:
-        row = self.find_by_first_name(user)
+        row = self.find_user(user.email_address)
         if row:
             execute_query(
                 """
@@ -36,7 +34,7 @@ class UserQueries:
             )
 
     def set_email(self, user: User) -> None:
-        row = self.find_by_first_name(user)
+        row = self.find_user(user.email_address)
         if row:
             execute_query(
                 """
@@ -53,7 +51,7 @@ class UserQueries:
             )
 
     def set_phone_number(self, user: User) -> None:
-        row = self.find_by_first_name(user)
+        row = self.find_user(user.email_address)
         if row:
             execute_query(
                 """
@@ -70,7 +68,7 @@ class UserQueries:
             )
 
     def set_status(self, user: User) -> None:
-        row = self.find_by_first_name(user)
+        row = self.find_user(user.email_address)
         if row:
             execute_query(
                 """
