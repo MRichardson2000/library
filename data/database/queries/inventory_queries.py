@@ -18,8 +18,6 @@ class InventoryQueries:
             """,
             {"title": book.title},
         )
-        if not rows:
-            return True
         value = rows[0].get("is_available")
         return False if value else True
     
