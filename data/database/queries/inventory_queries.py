@@ -1,23 +1,14 @@
-from data.database.dbconn import fetch_result, execute_query
+from data.database.dbconn import fetch_result, execute_query, load_env
 from data.dataclasses.db_dataclass import DB
 from data.classes.book import Book
 from data.classes.inventory import Inventory
 
 
 class InventoryQueries:
-    def __init__(self, db_session: DB) -> None:
+    def __init__(self, db_session: DB = load_env()) -> None:
         self.db_session = db_session
 
     def get_inventory_availability(self, book: Book) -> bool:
-        """
-        Check if a book is available in inventory.
-
-        Args:
-            book: The book to check availability for.
-
-        Returns:
-            True if the book is available, False otherwise.
-        """
         rows = fetch_result(
             """
             select i.is_available
@@ -26,23 +17,13 @@ class InventoryQueries:
             where b.title = :title
             """,
             {"title": book.title},
-            db_details=self.db_session,
         )
         if not rows:
-            return False
+            return True
         value = rows[0].get("is_available")
-        return bool(value)
-
-    def get_inventory_quantity(self, book: Book) -> int | None:
-        """
-        Get the available quantity of a book in inventory.
-
-        Args:
-            book: The book to get quantity for.
-
-        Returns:
-            The quantity available or None if not found.
-        """
+        return False if value else True
+    
+    def get_inventory_quantity(self, book: Book) -> int:
         rows = fetch_result(
             """
             select i.quantity_available
@@ -50,20 +31,13 @@ class InventoryQueries:
             left join inventory i on b.book_id = i.book_id
             where b.title = :title
             """,
-            {"title": book.title},
-            db_details=self.db_session,
+            {"title": book.title}
         )
         value = rows[0].get("quantity_available")
-        return value
+        return value if value else 0
+        
 
     def update_inventory_quantity(self, book: Book, inventory: Inventory) -> None:
-        """
-        Update the available quantity for a book in inventory.
-
-        Args:
-            book: The book to update.
-            inventory: The inventory object containing the new quantity.
-        """
         execute_query(
             """
             update inventory
@@ -74,5 +48,4 @@ class InventoryQueries:
                 "quantity_available": inventory.quantity,
                 "book_id": book.book_id,
             },
-            db_details=self.db_session,
         )

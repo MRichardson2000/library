@@ -21,18 +21,16 @@ def load_env(testing: bool = False) -> DB:
         raise RuntimeError(
             "Test mode is using the prod DB - Check your .env.test file!"
         )
-    db_details = DB(
+    return DB(
         db_user=os.getenv("DB_USER", ""),
         db_password=os.getenv("DB_PASSWORD", ""),
         db_host=os.getenv("DB_HOST", ""),
         db_port=os.getenv("DB_PORT", ""),
         db_name=os.getenv("DB_NAME", ""),
     )
-    return db_details
 
 
-def get_engine(db_details: DB | None = None) -> sa.Engine:
-    db_details = db_details or load_env()
+def get_engine(db_details: DB = load_env()) -> sa.Engine:
     url = (
         f"postgresql://{db_details.db_user}:{db_details.db_password}"
         f"@{db_details.db_host}:{db_details.db_port}/{db_details.db_name}"
@@ -43,7 +41,7 @@ def get_engine(db_details: DB | None = None) -> sa.Engine:
 def fetch_result(
     query: str, params: dict[str, Any] | None = None, db_details: DB | None = None
 ) -> list[dict[str, Any]]:
-    engine = get_engine(db_details)
+    engine = get_engine()
     try:
         with engine.begin() as conn:
             result = conn.execute(sa.text(query), params or {})
@@ -55,7 +53,7 @@ def fetch_result(
 def execute_query(
     query: str, params: dict[str, Any] | None = None, db_details: DB | None = None
 ) -> None:
-    engine = get_engine(db_details)
+    engine = get_engine()
     try:
         with engine.begin() as conn:
             conn.execute(sa.text(query), params or {})

@@ -14,12 +14,6 @@ class UserServices:
         self.user = user
 
     def create_user(self) -> None:
-        """
-        Create a new user in the database.
-
-        Raises:
-            DatabaseServiceError: If user creation fails.
-        """
         logging.info("Attempting to create user")
         try:
             self.user_queries.insert_user(self.user)
@@ -29,15 +23,6 @@ class UserServices:
             raise DatabaseServiceError("Failed to create user") from e
 
     def get_user_details(self) -> User | None:
-        """
-        Retrieve user details from the database by email address.
-
-        Returns:
-            User | None: User object if found, None otherwise.
-
-        Raises:
-            DatabaseServiceError: If retrieval fails.
-        """
         logging.info("Attempting to get user details from the database")
         try:
             rows = self.user_queries.find_user(self.user.email_address)
@@ -51,15 +36,6 @@ class UserServices:
             ) from e
 
     def change_surname(self, new_surname: str) -> None:
-        """
-        Update the user's surname in the database.
-
-        Args:
-            new_surname: The new surname to set.
-
-        Raises:
-            DatabaseServiceError: If the update fails.
-        """
         logging.info("Attempting to change surname for %s", self.user.first_name)
         self.user.last_name = new_surname
         try:
@@ -72,15 +48,6 @@ class UserServices:
             ) from e
 
     def email_change(self, new_email_address: str) -> None:
-        """
-        Update the user's email address in the database.
-
-        Args:
-            new_email_address: The new email address to set.
-
-        Raises:
-            DatabaseServiceError: If the update fails.
-        """
         logging.info(
             "Attempting to change email address for %s %s",
             self.user.first_name,
@@ -107,15 +74,6 @@ class UserServices:
             ) from e
 
     def phone_number_change(self, new_phone_number: str) -> None:
-        """
-        Update the user's phone number in the database.
-
-        Args:
-            new_phone_number: The new phone number to set.
-
-        Raises:
-            DatabaseServiceError: If the update fails.
-        """
         logging.info(
             "Attempting to update phone number for %s %s",
             self.user.first_name,
@@ -142,12 +100,6 @@ class UserServices:
             ) from e
 
     def delete_user(self) -> None:
-        """
-        Mark the user as deleted in the database.
-
-        Raises:
-            DatabaseServiceError: If the operation fails.
-        """
         logging.info(
             "Attempting to mark %s %s as deleted in the database",
             self.user.first_name,
@@ -174,12 +126,6 @@ class UserServices:
             ) from e
 
     def restore_user(self) -> None:
-        """
-        Mark the user as active in the database.
-
-        Raises:
-            DatabaseServiceError: If the operation fails.
-        """
         logging.info(
             "Attempting to mark %s %s as Active in the database",
             self.user.first_name,
