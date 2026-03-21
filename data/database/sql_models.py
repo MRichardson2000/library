@@ -26,7 +26,7 @@ users_insert = """
 
 book_table = """
     create table if not exists book (
-        book_id bigserial primary_key,
+        book_id bigserial primary key,
         title text not null,
         author text not null,
         genre text not null,
@@ -74,7 +74,7 @@ loan_insert = """
         inventory_id,
         loan_time,
         due_date,
-        return_date
+        return_date,
         late_return,
         status
     ) values (
@@ -91,10 +91,11 @@ loan_insert = """
 
 inventory_table = """
     create table if not exists inventory (
+        inventory_id bigserial primary key,
         book_id int not null,
         quantity_available int not null check (quantity_available >= 0),
         is_available boolean not null default true,
-        restock_threshold bool not null check (quantity_available > 2)
+        restock_threshold bool not null check (quantity_available > 2),
         constraint fk_inventory_book foreign key (book_id) references book(book_id) on delete restrict
     );
 """

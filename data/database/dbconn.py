@@ -62,10 +62,14 @@ def execute_query(
 
 
 def create_schemas() -> None:
+    print(" # --- Creating Users Table --- #")
     execute_query(users_table)
+    print(" # --- Creating Book Table --- #")
     execute_query(book_table)
-    execute_query(loan_table)
+    print(" # --- Creating Inventory Table --- #")
     execute_query(inventory_table)
+    print(" # --- Creating Loan Table --- #")
+    execute_query(loan_table)
 
 
 def main() -> None:

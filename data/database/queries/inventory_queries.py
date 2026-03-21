@@ -20,7 +20,7 @@ class InventoryQueries:
         )
         value = rows[0].get("is_available")
         return False if value else True
-    
+
     def get_inventory_quantity(self, book: Book) -> int:
         rows = fetch_result(
             """
@@ -29,11 +29,10 @@ class InventoryQueries:
             left join inventory i on b.book_id = i.book_id
             where b.title = :title
             """,
-            {"title": book.title}
+            {"title": book.title},
         )
         value = rows[0].get("quantity_available")
         return value if value else 0
-        
 
     def update_inventory_quantity(self, book: Book, inventory: Inventory) -> None:
         execute_query(
